@@ -12,7 +12,9 @@ data class ExerciseJson(
     val title: String,
     val description: String?,
     val images: List<String>?,
-    val weeklySets: Int
+    val weeklySets: Int,
+    val targetPerSet: String? = null,
+    val target: String? = null
 )
 
 data class ProgramJsonPayload(
@@ -90,7 +92,7 @@ ${gson.toJson(historySummary)}
 ۳. در صورت ضرورت، شدت (RPE)، تعداد ست‌ها یا حجم تمرین را تنظیم کرده یا در صورت نیاز هفته دِلود (Deload) تجویز کن.
 ۴. برنامه تمرینی کلاً به‌صورت یک بانک/حجم کلی ست‌های هفتگی (Weekly Sets) باشد و به روزهای خاص تقسیم نشود؛ به طوری که کاربر مختار باشد تمام ست‌ها را در ۱ روز بزند یا بین ۲ تا ۶ روز تقسیم کند و محدودیتی نداشته باشد.
 ۵. شناسه هر حرکت (id) باید اسم دقیق و استاندارد انگلیسی حرکت مانند bench_press، barbell_squat، push_up، dumbbell_bicep_curl، lat_pulldown، plank، deadlift و... باشد.
-۶. برای تصاویر حرکات تمرینی (images)، از لینک‌های معتبر و دقیق دیتابیس آزاد حرکت‌های ورزشی استفاده کن (مانند https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Bench_Press/0.jpg).
+۶. برای هر حرکت حتماً مقدار/هدف دقیق هر ست (مثلاً «۱۰ الی ۱۲ تکرار»، «۴۵ ثانیه»، «۲۰ شنا»، «۱۵ دقیقه پیاده‌روی» یا «تا ناتوانی») را در کلید targetPerSet مشخص کن.
 ۷. خروجی نهایی برنامه تمرینی هفته جدید را فقط و فقط در قالب یک آبجکت معتبر JSON مطابق ساختار زیر ارسال کن (بدون هیچ متن اضافی قبل یا بعد از کد):
 
 {
@@ -99,8 +101,8 @@ ${gson.toJson(historySummary)}
       "id": "bench_press",
       "title": "پرس سینه با هالتر",
       "description": "توضیحات کامل تکنیک اجرای صحیح",
-      "images": ["https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Bench_Press/0.jpg"],
-      "weeklySets": 4
+      "weeklySets": 4,
+      "targetPerSet": "۱۰ الی ۱۲ تکرار"
     }
   ]
 }
@@ -160,12 +162,7 @@ ${gson.toJson(historySummary)}
                     return Result.failure(Exception("اطلاعات id، title و weeklySets معتبر نیستند."))
                 }
 
-                // Resolve 5 accurate exercise image URLs via ExerciseImageHelper
-                val resolvedImages = ExerciseImageHelper.getExerciseImages(
-                    exerciseId = ex.id,
-                    title = ex.title ?: "",
-                    images = ex.images ?: emptyList()
-                )
+                val targetText = ex.targetPerSet ?: ex.target ?: ""
 
                 for (s in 1..ex.weeklySets) {
                     newTasks.add(
@@ -174,7 +171,8 @@ ${gson.toJson(historySummary)}
                             exerciseId = ex.id,
                             title = ex.title,
                             description = ex.description ?: "",
-                            images = resolvedImages,
+                            targetPerSet = targetText,
+                            images = emptyList(),
                             setNumber = s,
                             totalSets = ex.weeklySets,
                             completed = false

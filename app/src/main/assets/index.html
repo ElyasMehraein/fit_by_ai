@@ -538,7 +538,8 @@
             "https://images.unsplash.com/photo-1574680096145-d05b474e2155?auto=format&fit=crop&w=900&q=85",
             "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=900&q=85"
           ],
-          weeklySets: 4
+          weeklySets: 4,
+          targetPerSet: "۱۰ تا ۱۲ تکرار"
         },
         {
           id: "push-up",
@@ -547,7 +548,8 @@
           images: [
             "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&w=900&q=85"
           ],
-          weeklySets: 3
+          weeklySets: 3,
+          targetPerSet: "۱۵ تا ۲۰ تکرار"
         }
       ]
     };
@@ -781,7 +783,8 @@ ${JSON.stringify(historySummary, null, 2)}
 ۳. در صورت ضرورت، شدت (RPE)، تعداد ست‌ها یا حجم تمرین را تنظیم کرده یا در صورت نیاز هفته دِلود (Deload) تجویز کن.
 ۴. برنامه تمرینی کلاً به‌صورت یک بانک/حجم کلی ست‌های هفتگی (Weekly Sets) باشد و به روزهای خاص تقسیم نشود؛ به طوری که کاربر مختار باشد تمام ست‌ها را در ۱ روز بزند یا بین ۲ تا ۶ روز تقسیم کند و محدودیتی نداشته باشد.
 ۵. لینک تصاویر حرکات تمرینی (images) حتماً باید لینک مستقیم و معتبر با پسوند متداول تصویری (مانند .jpg، .png یا .webp) و از منابع معتبر ورزشی یا اینترنتی (مانند Unsplash، Wikimedia و ...) باشند.
-۶. خروجی نهایی برنامه تمرینی هفته جدید را فقط و فقط در قالب یک آبجکت معتبر JSON مطابق ساختار زیر ارسال کن (بدون هیچ متن اضافی قبل یا بعد از کد):
+۶. برای هر حرکت حتماً مقدار/هدف دقیق هر ست (مثلاً «۱۰ الی ۱۲ تکرار»، «۴۵ ثانیه»، «۲۰ شنا»، «۱۵ دقیقه پیاده‌روی» یا «تا ناتوانی») را در کلید targetPerSet مشخص کن.
+۷. خروجی نهایی برنامه تمرینی هفته جدید را فقط و فقط در قالب یک آبجکت معتبر JSON مطابق ساختار زیر ارسال کن (بدون هیچ متن اضافی قبل یا بعد از کد):
 
 {
   "exercises": [
@@ -790,7 +793,8 @@ ${JSON.stringify(historySummary, null, 2)}
       "title": "نام فارسی حرکت",
       "description": "توضیحات کامل تکنیک اجرای صحیح",
       "images": ["https://images.unsplash.com/photo-example.jpg", "https://commons.wikimedia.org/example.png"],
-      "weeklySets": 4
+      "weeklySets": 4,
+      "targetPerSet": "۱۰ الی ۱۲ تکرار"
     }
   ]
 }`;
@@ -903,12 +907,15 @@ ${JSON.stringify(historySummary, null, 2)}
           ? exercise.images.filter(image => typeof image === "string" && image.trim())
           : [];
 
+        const targetPerSet = exercise.targetPerSet || exercise.target || "";
+
         for (let index = 1; index <= sets; index += 1) {
           generatedTasks.push({
             taskId: `${exercise.id}-set-${index}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
             exerciseId: exercise.id,
             title: exercise.title,
             description: exercise.description || "",
+            targetPerSet,
             images,
             setNumber: index,
             totalSets: sets,
@@ -1170,9 +1177,18 @@ ${JSON.stringify(historySummary, null, 2)}
                 <h3 class="text-sm font-black leading-6 text-white">
                   ${title}
                 </h3>
-                <span class="rounded-md border border-slate-800 bg-slate-900 px-2 py-0.5 font-mono text-[10px] text-emerald-400 font-bold">
-                  ست ${formatNumber(task.setNumber)} از ${formatNumber(task.totalSets)}
-                </span>
+                <div class="flex items-center gap-1.5">
+                  ${
+                    task.targetPerSet
+                      ? `<span class="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
+                          ${escapeHtml(task.targetPerSet)}
+                         </span>`
+                      : ""
+                  }
+                  <span class="rounded-md border border-slate-800 bg-slate-900 px-2 py-0.5 font-mono text-[10px] text-emerald-400 font-bold">
+                    ست ${formatNumber(task.setNumber)} از ${formatNumber(task.totalSets)}
+                  </span>
+                </div>
               </div>
             </div>
 

@@ -27,6 +27,7 @@ data class WorkoutTaskEntity(
     val exerciseId: String,
     val title: String,
     val description: String,
+    val targetPerSet: String = "",
     val images: List<String>,
     val setNumber: Int,
     val totalSets: Int,
