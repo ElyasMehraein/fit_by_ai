@@ -160,8 +160,8 @@ ${gson.toJson(historySummary)}
                     return Result.failure(Exception("اطلاعات id، title و weeklySets معتبر نیستند."))
                 }
 
-                // Resolve guaranteed accurate exercise image URL via ExerciseImageHelper
-                val resolvedImageUrl = ExerciseImageHelper.getExerciseImageUrl(
+                // Resolve 5 accurate exercise image URLs via ExerciseImageHelper
+                val resolvedImages = ExerciseImageHelper.getExerciseImages(
                     exerciseId = ex.id,
                     title = ex.title ?: "",
                     images = ex.images ?: emptyList()
@@ -174,7 +174,7 @@ ${gson.toJson(historySummary)}
                             exerciseId = ex.id,
                             title = ex.title,
                             description = ex.description ?: "",
-                            images = listOf(resolvedImageUrl),
+                            images = resolvedImages,
                             setNumber = s,
                             totalSets = ex.weeklySets,
                             completed = false

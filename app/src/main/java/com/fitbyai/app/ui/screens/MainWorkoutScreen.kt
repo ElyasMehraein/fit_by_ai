@@ -1,13 +1,18 @@
 package com.fitbyai.app.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -522,11 +527,22 @@ fun SegmentedButtonOption(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SingleSetTaskCard(
     task: WorkoutTaskEntity,
     onToggleStatus: (taskId: String, currentStatus: Boolean) -> Unit
 ) {
+    val context = LocalContext.current
+    val images = remember(task) {
+        com.fitbyai.app.data.ExerciseImageHelper.getExerciseImages(
+            exerciseId = task.exerciseId,
+            title = task.title,
+            images = task.images
+        )
+    }
+    val pagerState = rememberPagerState(pageCount = { images.size })
+
     Card(
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
@@ -536,44 +552,78 @@ fun SingleSetTaskCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column {
-            // Exercise Header Image & Title
+            // Exercise Square 1:1 Aspect Ratio Slider
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(150.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                                MaterialTheme.colorScheme.surfaceContainerHigh
-                            )
-                        )
-                    )
+                    .aspectRatio(1f)
+                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             ) {
-                val imageUrl = com.fitbyai.app.data.ExerciseImageHelper.getExerciseImageUrl(
-                    exerciseId = task.exerciseId,
-                    title = task.title,
-                    images = task.images
-                )
-
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(imageUrl)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = task.title,
-                    contentScale = ContentScale.Crop,
+                HorizontalPager(
+                    state = pagerState,
                     modifier = Modifier.fillMaxSize()
-                )
+                ) { page ->
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(images[page])
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "${task.title} - $page",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                // Dark Gradient for text readability
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.65f))
+                                colors = listOf(
+                                    Color.Black.copy(alpha = 0.25f),
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.75f)
+                                )
                             )
                         )
                 )
+
+                // Page Counter Badge (Top Right)
+                Surface(
+                    color = Color.Black.copy(alpha = 0.6f),
+                    shape = CircleShape,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(12.dp)
+                ) {
+                    Text(
+                        text = "${pagerState.currentPage + 1} از ${images.size}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+
+                // Page Indicator Dots
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 54.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    repeat(images.size) { index ->
+                        val isSelected = pagerState.currentPage == index
+                        Box(
+                            modifier = Modifier
+                                .size(if (isSelected) 8.dp else 6.dp)
+                                .clip(CircleShape)
+                                .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.6f))
+                        )
+                    }
+                }
 
                 // Exercise Title & Set Badge
                 Row(
@@ -588,7 +638,7 @@ fun SingleSetTaskCard(
                         text = task.title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = if (task.images.isNotEmpty()) Color.White else MaterialTheme.colorScheme.onSurface,
+                        color = Color.White,
                         textDecoration = if (task.completed) TextDecoration.LineThrough else TextDecoration.None
                     )
 
@@ -612,6 +662,35 @@ fun SingleSetTaskCard(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
+                // "تصاویر بیشتر" Google Search Button
+                OutlinedButton(
+                    onClick = {
+                        val searchQuery = Uri.encode("حرکت ورزشی ${task.title}")
+                        val intent = Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse("https://www.google.com/search?q=$searchQuery&tbm=isch")
+                        )
+                        context.startActivity(intent)
+                    },
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "جستجوی تصاویر گوگل",
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "تصاویر بیشتر (در گوگل)",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
                 if (task.description.isNotBlank()) {
                     Text(
                         text = task.description,
