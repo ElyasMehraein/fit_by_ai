@@ -89,16 +89,16 @@ ${gson.toJson(historySummary)}
 ۲. پس از دریافت عکس، روند تغییرات ظاهری، وزن، دور کمر، خواب، انرژی و بازخوردهای من را دقیقاً مقایسه کن.
 ۳. در صورت ضرورت، شدت (RPE)، تعداد ست‌ها یا حجم تمرین را تنظیم کرده یا در صورت نیاز هفته دِلود (Deload) تجویز کن.
 ۴. برنامه تمرینی کلاً به‌صورت یک بانک/حجم کلی ست‌های هفتگی (Weekly Sets) باشد و به روزهای خاص تقسیم نشود؛ به طوری که کاربر مختار باشد تمام ست‌ها را در ۱ روز بزند یا بین ۲ تا ۶ روز تقسیم کند و محدودیتی نداشته باشد.
-۵. لینک تصاویر حرکات تمرینی (images) حتماً باید لینک مستقیم و معتبر با پسوند متداول تصویری (مانند .jpg، .png یا .webp) و از منابع معتبر ورزشی یا اینترنتی (مانند Unsplash، Wikimedia و ...) باشند.
+۵. برای تصاویر حرکات تمرینی (images)، حتماً از سرویس پویا و معتبر عکس زنده با فرمت https://loremflickr.com/600/400/{شناسه_انگلیسی_حرکت},fitness استفاده کن تا تصویر همیشه زنده، مرتبط و بدون قطعی باشد.
 ۶. خروجی نهایی برنامه تمرینی هفته جدید را فقط و فقط در قالب یک آبجکت معتبر JSON مطابق ساختار زیر ارسال کن (بدون هیچ متن اضافی قبل یا بعد از کد):
 
 {
   "exercises": [
     {
-      "id": "شناسه انگلیسی حرکت",
-      "title": "نام فارسی حرکت",
+      "id": "bench_press",
+      "title": "پرس سینه با هالتر",
       "description": "توضیحات کامل تکنیک اجرای صحیح",
-      "images": ["https://images.unsplash.com/photo-example.jpg", "https://commons.wikimedia.org/example.png"],
+      "images": ["https://loremflickr.com/600/400/benchpress,fitness"],
       "weeklySets": 4
     }
   ]
@@ -158,6 +158,19 @@ ${gson.toJson(historySummary)}
                 if (ex.weeklySets <= 0 || ex.id.isBlank() || ex.title.isBlank()) {
                     return Result.failure(Exception("اطلاعات id، title و weeklySets معتبر نیستند."))
                 }
+
+                // Filter valid images or generate reliable LoremFlickr URLs
+                val validRawImages = ex.images?.filter {
+                    it.isNotBlank() && it.startsWith("http") && !it.contains("example.com") && !it.contains("photo-example")
+                } ?: emptyList()
+
+                val cleanExerciseTag = ex.id.replace("_", "").replace("-", "").lowercase()
+                val processedImages = if (validRawImages.isNotEmpty()) {
+                    validRawImages
+                } else {
+                    listOf("https://loremflickr.com/600/400/$cleanExerciseTag,fitness")
+                }
+
                 for (s in 1..ex.weeklySets) {
                     newTasks.add(
                         WorkoutTaskEntity(
@@ -165,7 +178,7 @@ ${gson.toJson(historySummary)}
                             exerciseId = ex.id,
                             title = ex.title,
                             description = ex.description ?: "",
-                            images = ex.images ?: emptyList(),
+                            images = processedImages,
                             setNumber = s,
                             totalSets = ex.weeklySets,
                             completed = false
