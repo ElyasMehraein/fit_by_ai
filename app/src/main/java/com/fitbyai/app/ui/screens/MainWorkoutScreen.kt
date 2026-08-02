@@ -559,9 +559,11 @@ fun SingleSetTaskCard(
                         )
                     )
             ) {
-                val cleanTag = task.exerciseId.replace("_", "").replace("-", "").lowercase()
-                val imageUrl = task.images.firstOrNull { it.isNotBlank() && it.startsWith("http") }
-                    ?: "https://loremflickr.com/600/400/${cleanTag.ifBlank { "fitness" }},fitness"
+                val imageUrl = com.fitbyai.app.data.ExerciseImageHelper.getExerciseImageUrl(
+                    exerciseId = task.exerciseId,
+                    title = task.title,
+                    images = task.images
+                )
 
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)

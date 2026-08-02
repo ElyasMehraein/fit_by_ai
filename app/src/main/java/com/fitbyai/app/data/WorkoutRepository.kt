@@ -89,8 +89,9 @@ ${gson.toJson(historySummary)}
 ۲. پس از دریافت عکس، روند تغییرات ظاهری، وزن، دور کمر، خواب، انرژی و بازخوردهای من را دقیقاً مقایسه کن.
 ۳. در صورت ضرورت، شدت (RPE)، تعداد ست‌ها یا حجم تمرین را تنظیم کرده یا در صورت نیاز هفته دِلود (Deload) تجویز کن.
 ۴. برنامه تمرینی کلاً به‌صورت یک بانک/حجم کلی ست‌های هفتگی (Weekly Sets) باشد و به روزهای خاص تقسیم نشود؛ به طوری که کاربر مختار باشد تمام ست‌ها را در ۱ روز بزند یا بین ۲ تا ۶ روز تقسیم کند و محدودیتی نداشته باشد.
-۵. برای تصاویر حرکات تمرینی (images)، حتماً از سرویس پویا و معتبر عکس زنده با فرمت https://loremflickr.com/600/400/{شناسه_انگلیسی_حرکت},fitness استفاده کن تا تصویر همیشه زنده، مرتبط و بدون قطعی باشد.
-۶. خروجی نهایی برنامه تمرینی هفته جدید را فقط و فقط در قالب یک آبجکت معتبر JSON مطابق ساختار زیر ارسال کن (بدون هیچ متن اضافی قبل یا بعد از کد):
+۵. شناسه هر حرکت (id) باید اسم دقیق و استاندارد انگلیسی حرکت مانند bench_press، barbell_squat، push_up، dumbbell_bicep_curl، lat_pulldown، plank، deadlift و... باشد.
+۶. برای تصاویر حرکات تمرینی (images)، از لینک‌های معتبر و دقیق دیتابیس آزاد حرکت‌های ورزشی استفاده کن (مانند https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Bench_Press/0.jpg).
+۷. خروجی نهایی برنامه تمرینی هفته جدید را فقط و فقط در قالب یک آبجکت معتبر JSON مطابق ساختار زیر ارسال کن (بدون هیچ متن اضافی قبل یا بعد از کد):
 
 {
   "exercises": [
@@ -98,7 +99,7 @@ ${gson.toJson(historySummary)}
       "id": "bench_press",
       "title": "پرس سینه با هالتر",
       "description": "توضیحات کامل تکنیک اجرای صحیح",
-      "images": ["https://loremflickr.com/600/400/benchpress,fitness"],
+      "images": ["https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/Barbell_Bench_Press/0.jpg"],
       "weeklySets": 4
     }
   ]
@@ -159,17 +160,12 @@ ${gson.toJson(historySummary)}
                     return Result.failure(Exception("اطلاعات id، title و weeklySets معتبر نیستند."))
                 }
 
-                // Filter valid images or generate reliable LoremFlickr URLs
-                val validRawImages = ex.images?.filter {
-                    it.isNotBlank() && it.startsWith("http") && !it.contains("example.com") && !it.contains("photo-example")
-                } ?: emptyList()
-
-                val cleanExerciseTag = ex.id.replace("_", "").replace("-", "").lowercase()
-                val processedImages = if (validRawImages.isNotEmpty()) {
-                    validRawImages
-                } else {
-                    listOf("https://loremflickr.com/600/400/$cleanExerciseTag,fitness")
-                }
+                // Resolve guaranteed accurate exercise image URL via ExerciseImageHelper
+                val resolvedImageUrl = ExerciseImageHelper.getExerciseImageUrl(
+                    exerciseId = ex.id,
+                    title = ex.title ?: "",
+                    images = ex.images ?: emptyList()
+                )
 
                 for (s in 1..ex.weeklySets) {
                     newTasks.add(
@@ -178,7 +174,7 @@ ${gson.toJson(historySummary)}
                             exerciseId = ex.id,
                             title = ex.title,
                             description = ex.description ?: "",
-                            images = processedImages,
+                            images = listOf(resolvedImageUrl),
                             setNumber = s,
                             totalSets = ex.weeklySets,
                             completed = false
