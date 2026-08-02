@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#020617" />
+  <title>Fit by AI | برنامه تمرین هفتگی هوشمند</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome 6 Icons -->
+  <link
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    rel="stylesheet"
+  />
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700;800;900&display=swap');
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: "Vazirmatn", sans-serif;
+      background: #020617;
+      color: #f8fafc;
+      touch-action: manipulation;
+    }
+
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 999px;
+    }
+
+    .urgent-pulse {
+      animation: urgentPulse 1.6s infinite;
+    }
+
+    @keyframes urgentPulse {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.75;
+        transform: scale(0.99);
+      }
+    }
+  </style>
+</head>
+
+<body class="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-0 sm:p-4">
+
+  <!-- Main Mobile App Frame -->
+  <div class="relative w-full max-w-md h-screen sm:h-[92vh] sm:rounded-[2.5rem] overflow-hidden bg-slate-950 border border-slate-800 flex flex-col">
+    
+    <!-- Top Status Bar -->
+    <div class="h-9 shrink-0 bg-slate-950 px-5 text-[11px] font-mono text-slate-400 flex items-center justify-between border-b border-slate-900 z-10">
+      <span id="currentTime">12:30</span>
+      <div class="flex items-center gap-1.5 text-xs text-slate-400">
+        <i class="fas fa-wifi text-[10px]"></i>
+        <i class="fas fa-signal text-[10px]"></i>
+        <i class="fas fa-battery-three-quarters text-emerald-400"></i>
+      </div>
+    </div>
+
+    <!-- App Header Banner -->
+    <header class="shrink-0 border-b border-slate-800/80 bg-slate-900/90 px-5 pb-3.5 pt-3.5 backdrop-blur-md">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-400 text-slate-950 shadow-md shadow-emerald-500/20">
+            <i class="fas fa-dumbbell text-lg font-black"></i>
+          </div>
+          <div>
+            <h1 class="text-lg font-black tracking-tight text-white flex items-center gap-1.5">
+              Fit by AI
+              <span class="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400 border border-emerald-500/20">هوشمند</span>
+            </h1>
+            <p class="text-[11px] text-slate-400">مدیریت برنامه و ریکاوری هفتگی</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <!-- History Button -->
+          <button
+            type="button"
+            onclick="toggleHistoryModal(true)"
+            title="تاریخچه پیشرفت"
+            class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-800 text-slate-300 transition hover:bg-slate-750 hover:text-emerald-400 active:scale-95 border border-slate-700/60"
+          >
+            <i class="fas fa-clock-rotate-left"></i>
+          </button>
+
+          <!-- Weekly Review & JSON Modal Button -->
+          <button
+            type="button"
+            onclick="handleOpenModal()"
+            title="بروزرسانی برنامه هفتگی"
+            class="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-500 to-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/25 transition hover:brightness-110 active:scale-95 font-bold"
+          >
+            <i class="fas fa-wand-magic-sparkles"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Weekly Countdown & Status Banner -->
+      <div
+        id="deadlineBanner"
+        class="mt-3.5 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3 transition-all duration-300"
+      >
+        <div class="flex items-center gap-2.5">
+          <div id="deadlineIcon" class="text-emerald-400 text-lg shrink-0">
+            <i class="fas fa-hourglass-half"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p id="deadlineMessage" class="text-xs font-bold leading-5 text-emerald-300 truncate">
+              در حال محاسبه زمان‌بندی هفته...
+            </p>
+            <div class="mt-0.5 flex items-center justify-between text-[10px] text-slate-400">
+              <span id="uploadTimeLabel">شروع: -</span>
+              <span id="deadlineLabel">پایان: -</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Weekly Progress Bar Card -->
+      <div class="mt-3 rounded-2xl border border-slate-800 bg-slate-950/80 p-3">
+        <div class="mb-1.5 flex items-center justify-between text-xs">
+          <span class="font-bold text-slate-300">پیشرفت هفته جاری</span>
+          <span id="progressText" class="font-mono font-bold text-emerald-400">۰٪</span>
+        </div>
+        <div class="h-2 w-full overflow-hidden rounded-full bg-slate-800/80">
+          <div
+            id="progressBar"
+            class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500"
+            style="width: 0%"
+          ></div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <div class="grid shrink-0 grid-cols-2 border-b border-slate-800 bg-slate-900/50">
+      <button
+        id="queueTab"
+        type="button"
+        onclick="switchTab('queue')"
+        class="border-b-2 border-emerald-500 py-3 text-xs font-bold text-emerald-400 transition flex items-center justify-center gap-1.5"
+      >
+        <span>در صف انجام</span>
+        <span id="queueCount" class="font-mono rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-400">(۰)</span>
+      </button>
+
+      <button
+        id="doneTab"
+        type="button"
+        onclick="switchTab('done')"
+        class="border-b-2 border-transparent py-3 text-xs font-bold text-slate-400 transition hover:text-slate-200 flex items-center justify-center gap-1.5"
+      >
+        <span>انجام شده</span>
+        <span id="doneCount" class="font-mono rounded-full bg-slate-800 px-2 py-0.5 text-[10px] text-slate-400">(۰)</span>
+      </button>
+    </div>
+
+    <!-- Main Content Area: Task List -->
+    <main class="custom-scrollbar flex-1 overflow-y-auto bg-slate-950 relative">
+      <div id="queueList" class="divide-y divide-slate-900"></div>
+      <div id="doneList" class="hidden divide-y divide-slate-900"></div>
+
+      <!-- Empty State View -->
+      <div
+        id="emptyState"
+        class="flex h-full flex-col items-center justify-center p-8 text-center text-slate-500"
+      >
+        <div class="flex h-16 w-16 items-center justify-center rounded-3xl bg-slate-900/80 border border-slate-800 mb-3 text-slate-600">
+          <i class="fas fa-dumbbell text-3xl"></i>
+        </div>
+        <p class="text-sm font-bold text-slate-300">برنامه‌ای تعریف نشده است</p>
+        <p class="mt-1.5 text-xs text-slate-500 leading-6 max-w-[240px]">
+          از دکمه <i class="fas fa-wand-magic-sparkles text-emerald-400"></i> بالا برای ثبت اطلاعات هفتگی و بارگذاری برنامه JSON استفاده کنید.
+        </p>
+        <button
+          type="button"
+          onclick="handleOpenModal()"
+          class="mt-4 rounded-xl bg-emerald-500/15 px-4 py-2 text-xs font-bold text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/25 transition active:scale-95"
+        >
+          دریافت و بارگذاری برنامه جدید
+        </button>
+      </div>
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="flex h-14 shrink-0 items-center justify-around border-t border-slate-900 bg-slate-950 text-slate-500 z-10">
+      <button type="button" onclick="switchTab('queue')" class="flex flex-col items-center gap-1 text-emerald-400">
+        <i class="fas fa-dumbbell text-base"></i>
+        <span class="text-[9px] font-bold">تمرینات</span>
+      </button>
+
+      <button type="button" onclick="toggleHistoryModal(true)" class="flex flex-col items-center gap-1 transition hover:text-slate-300">
+        <i class="fas fa-chart-line text-base"></i>
+        <span class="text-[9px] font-bold">تاریخچه</span>
+      </button>
+
+      <button type="button" onclick="openProfileModal()" class="flex flex-col items-center gap-1 transition hover:text-slate-300">
+        <i class="fas fa-user-gear text-base"></i>
+        <span class="text-[9px] font-bold">پروفایل</span>
+      </button>
+    </nav>
+
+    <!-- MODAL 1: Baseline Profile Setup Modal -->
+    <div
+      id="profileModal"
+      class="absolute inset-0 z-50 hidden items-end justify-center bg-black/80 backdrop-blur-md transition-all"
+    >
+      <div class="flex max-h-[92%] w-full flex-col gap-4 overflow-y-auto rounded-t-[2rem] border-t border-slate-800 bg-slate-900 p-6 custom-scrollbar">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-2">
+            <i class="fas fa-user-gear text-emerald-400 text-lg"></i>
+            <h2 class="text-base font-extrabold text-white">پروفایل اولیه کاربر</h2>
+          </div>
+          <button type="button" onclick="toggleProfileModal(false)" class="text-slate-400 hover:text-white p-1">
+            <i class="fas fa-times text-lg"></i>
+          </button>
+        </div>
+
+        <p class="text-xs leading-6 text-slate-400">
+          این اطلاعات پایه برای شخصی‌سازی پرامپت‌ها و برنامه‌های تمرینی هوش مصنوعی استفاده می‌شوند.
+        </p>
+
+        <form id="profileForm" onsubmit="saveUserProfile(event)" class="flex flex-col gap-3.5">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-1">قد (سانتی‌متر)</label>
+              <input id="profHeight" type="number" required placeholder="مثال: 180" class="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-xs text-emerald-400 outline-none focus:border-emerald-500" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-1">سن</label>
+              <input id="profAge" type="number" required placeholder="مثال: 26" class="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-xs text-emerald-400 outline-none focus:border-emerald-500" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-1">جنسیت</label>
+              <select id="profGender" class="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-xs text-emerald-400 outline-none focus:border-emerald-500">
+                <option value="مرد">مرد</option>
+                <option value="زن">زن</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-1">هدف اصلی</label>
+              <select id="profGoal" class="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-xs text-emerald-400 outline-none focus:border-emerald-500">
+                <option value="عضله‌سازی و هیپرتروفی">عضله‌سازی (حجم)</option>
+                <option value="چربی‌سوزی و کاهش وزن">چربی‌سوزی (کات)</option>
+                <option value="افزایش قدرت و تناسب">افزایش قدرت</option>
+                <option value="حفظ وزن و سلامتی">حفظ فرم بدنی</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-1">وزن اولیه (کیلوگرم)</label>
+              <input id="profBaseWeight" type="number" step="0.1" required placeholder="مثال: 80" class="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-xs text-emerald-400 outline-none focus:border-emerald-500" />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-1">دور کمر اولیه (cm)</label>
+              <input id="profBaseWaist" type="number" step="0.1" required placeholder="مثال: 88" class="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-xs text-emerald-400 outline-none focus:border-emerald-500" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-1">سابقه تمرین</label>
+              <select id="profExp" class="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-xs text-emerald-400 outline-none focus:border-emerald-500">
+                <option value="مبتدی (کمتر از 6 ماه)">مبتدی</option>
+                <option value="متوسط (6 ماه تا 2 سال)">متوسط</option>
+                <option value="پیشرفته (بیش از 2 سال)">پیشرفته</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-300 mb-1">روزهای تمرین در هفته</label>
+              <select id="profDays" class="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-xs text-emerald-400 outline-none focus:border-emerald-500">
+                <option value="3 روز در هفته">3 روز</option>
+                <option value="4 روز در هفته" selected>4 روز</option>
+                <option value="5 روز در هفته">5 روز</option>
+                <option value="6 روز در هفته">6 روز</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">تجهیزات در دسترس</label>
+            <input id="profEquipment" type="text" placeholder="مثال: باشگاه مجهز کامل / دمبل و کش در منزل" class="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-xs text-emerald-400 outline-none focus:border-emerald-500" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">محدودیت‌ها یا آسیب‌های قبلی</label>
+            <input id="profLimitations" type="text" placeholder="مثال: دیسک کمر خفیف، زانودرد در اسکوات سنگین" class="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-xs text-emerald-400 outline-none focus:border-emerald-500" />
+          </div>
+
+          <button
+            type="submit"
+            class="mt-2 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 py-3.5 font-bold text-slate-950 shadow-lg shadow-emerald-500/20 active:scale-[0.98] transition"
+          >
+            ذخیره اطلاعات پروفایل
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL 2: Weekly Review & AI Prompt / JSON Importer Modal -->
+    <div
+      id="jsonModal"
+      class="absolute inset-0 z-50 hidden items-end justify-center bg-black/80 backdrop-blur-md transition-all"
+    >
+      <div class="flex max-h-[92%] w-full flex-col gap-4 overflow-y-auto rounded-t-[2.5rem] border-t border-slate-800 bg-slate-900 p-5 sm:p-6 custom-scrollbar">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-2">
+            <i class="fas fa-wand-magic-sparkles text-emerald-400"></i>
+            <h2 class="text-base font-extrabold text-white">بروزرسانی هفتگی و دریافت برنامه</h2>
+          </div>
+
+          <button
+            type="button"
+            onclick="toggleJsonModal(false)"
+            title="بستن"
+            class="text-slate-400 hover:text-white p-1 transition"
+          >
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+
+        <!-- Section A: 7-Day Weekly Review Form -->
+        <div id="weeklyFormSection" class="flex flex-col gap-4 border-b border-slate-800 pb-5">
+          <div id="weekStatusNotice" class="rounded-2xl bg-amber-500/10 border border-amber-500/20 p-3 text-xs leading-6 text-amber-300">
+            <i class="fas fa-triangle-exclamation text-amber-400 ml-1"></i>
+            برای دریافت برنامه هفتگی جدید، اطلاعات سنجش فیزیولوژیک و ریکاوری هفته گذشته خود را وارد کنید.
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-300 mb-1">وزن جدید (کیلوگرم)</label>
+              <input
+                id="userWeight"
+                type="number"
+                step="0.1"
+                class="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-xs text-emerald-400 outline-none focus:border-emerald-500"
+                placeholder="مثال: 78.5"
+              />
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-300 mb-1">دور کمر جدید (cm)</label>
+              <input
+                id="userWaist"
+                type="number"
+                step="0.1"
+                class="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-xs text-emerald-400 outline-none focus:border-emerald-500"
+                placeholder="مثال: 87.5"
+              />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <label class="block text-[10px] font-bold text-slate-400 mb-1">میانگین خواب</label>
+              <select id="userSleep" class="w-full rounded-xl border border-slate-800 bg-slate-950 p-2 text-xs text-emerald-400 outline-none focus:border-emerald-500">
+                <option value="8 ساعت">8+ ساعت</option>
+                <option value="7.5 ساعت" selected>7.5 ساعت</option>
+                <option value="6.5 ساعت">6.5 ساعت</option>
+                <option value="کمتر از 6 ساعت">کمتر از 6 ساعت</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-400 mb-1">سطح انرژی (1-10)</label>
+              <input id="userEnergy" type="number" min="1" max="10" value="8" class="w-full rounded-xl border border-slate-800 bg-slate-950 p-2 text-xs text-emerald-400 text-center outline-none focus:border-emerald-500" />
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-400 mb-1">سختی تمرین (1-10)</label>
+              <input id="userRpe" type="number" min="1" max="10" value="7" class="w-full rounded-xl border border-slate-800 bg-slate-950 p-2 text-xs text-emerald-400 text-center outline-none focus:border-emerald-500" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-bold text-slate-300 mb-1">درد یا آسیب جدید</label>
+            <input id="userPain" type="text" placeholder="مثال: گرفتگی عضلات فیله کمر، زانوی راست (یا نوشتن 'هیچ')" class="w-full rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-xs text-emerald-400 outline-none focus:border-emerald-500" />
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-bold text-slate-300 mb-1">بازخورد و سابقه تمرینات اخیر</label>
+            <textarea
+              id="userFeedback"
+              class="w-full h-20 rounded-xl border border-slate-800 bg-slate-950 p-2.5 text-xs text-emerald-400 outline-none focus:border-emerald-500 resize-none leading-6"
+              placeholder="مثال: خستگی شدید در ست‌های آخر اسکات، پیشرفت خوب در شنا..."
+            ></textarea>
+          </div>
+
+          <button
+            type="button"
+            onclick="generatePromptForAi()"
+            class="w-full rounded-xl bg-slate-800 py-3 text-xs font-bold text-emerald-400 border border-emerald-500/20 hover:bg-slate-750 transition flex items-center justify-center gap-2"
+          >
+            <i class="fas fa-robot"></i>
+            تولید پرامپت هوش مصنوعی (شامل درخواست عکس و تاریخچه)
+          </button>
+        </div>
+
+        <!-- Section B: Generated Prompt Output -->
+        <div id="aiPromptSection" class="hidden flex-col gap-2 border-b border-slate-800 pb-5">
+          <div class="flex items-center justify-between">
+            <label class="block text-xs text-slate-300 font-bold">متن کپی‌شدنی برای هوش مصنوعی (ChatGPT / Claude / DeepSeek)</label>
+            <span class="text-[10px] text-emerald-400 font-bold">کپی کرده و ارسال کنید</span>
+          </div>
+
+          <div class="relative">
+            <textarea
+              id="aiPromptTextarea"
+              readonly
+              class="w-full h-40 rounded-xl border border-slate-800 bg-slate-950 p-3 text-[11px] text-slate-300 outline-none font-mono leading-5 custom-scrollbar"
+            ></textarea>
+            
+            <button
+              type="button"
+              onclick="copyPromptText()"
+              id="copyPromptBtn"
+              class="absolute bottom-3 left-3 px-3 py-1.5 rounded-lg bg-emerald-500 text-slate-950 text-xs font-bold hover:bg-emerald-400 transition active:scale-95 shadow-md flex items-center gap-1"
+            >
+              <i class="fas fa-copy"></i>
+              <span>کپی متن پرامپت</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Section C: JSON Importer Input -->
+        <div class="flex flex-col gap-2">
+          <label class="block text-xs text-slate-300 font-bold flex items-center justify-between">
+            <span>ورود ساختار برنامه تمرین (JSON)</span>
+            <span class="text-[10px] text-slate-500">پاسخ هوش مصنوعی را اینجا Paste کنید</span>
+          </label>
+
+          <textarea
+            id="jsonInput"
+            dir="ltr"
+            class="h-36 w-full rounded-2xl border border-slate-800 bg-slate-950 p-3.5 text-xs font-mono text-emerald-400 outline-none focus:border-emerald-500 custom-scrollbar"
+            placeholder='{ "exercises": [ ... ] }'
+          ></textarea>
+        </div>
+
+        <div id="jsonError" class="hidden rounded-xl bg-rose-500/10 border border-rose-500/20 p-3 text-xs leading-6 text-rose-400"></div>
+
+        <button
+          type="button"
+          onclick="importJson()"
+          class="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 py-3.5 font-extrabold text-slate-950 transition hover:brightness-110 active:scale-[0.98] shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
+        >
+          <i class="fas fa-play text-sm"></i>
+          ایجاد صف تمرینات و شروع هفته جدید
+        </button>
+      </div>
+    </div>
+
+    <!-- MODAL 3: Timeline & History Drawer Modal -->
+    <div
+      id="historyModal"
+      class="absolute inset-0 z-50 hidden items-end justify-center bg-black/80 backdrop-blur-md transition-all"
+    >
+      <div class="flex max-h-[92%] w-full flex-col gap-4 overflow-y-auto rounded-t-[2.5rem] border-t border-slate-800 bg-slate-900 p-6 custom-scrollbar">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-2">
+            <i class="fas fa-clock-rotate-left text-emerald-400"></i>
+            <h2 class="text-base font-extrabold text-white">تاریخچه پیشرفت و هفته‌ها</h2>
+          </div>
+          <button type="button" onclick="toggleHistoryModal(false)" class="text-slate-400 hover:text-white p-1">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+
+        <!-- History Summary Stats -->
+        <div id="historyStatsContainer" class="grid grid-cols-3 gap-2"></div>
+
+        <!-- Timeline List -->
+        <div id="historyTimeline" class="flex flex-col gap-3 mt-1"></div>
+
+        <!-- Data Backup & Clear Buttons -->
+        <div class="flex items-center gap-2 border-t border-slate-800 pt-4 mt-2">
+          <button type="button" onclick="exportDataBackup()" class="flex-1 rounded-xl bg-slate-800 py-2.5 text-xs font-bold text-slate-300 hover:bg-slate-750 transition flex items-center justify-center gap-1.5">
+            <i class="fas fa-download"></i>
+            دانلود پشتیبان (JSON)
+          </button>
+          <button type="button" onclick="resetAllAppData()" class="rounded-xl bg-rose-500/10 border border-rose-500/20 px-3 py-2.5 text-xs font-bold text-rose-400 hover:bg-rose-500/20 transition">
+            ریست داده‌ها
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ----------------------------------------------------
+    // CONSTANTS & STATE VARIABLES
+    // ----------------------------------------------------
+    const WEEK_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
+    const STORAGE_KEY = "fit_by_ai_data_v2";
+
+    let currentTab = "queue";
+    let weeklySetTasks = [];
+    let uploadTimestamp = null;
+    let deadlineTimestamp = null;
+    let userProfile = null;
+    let userHistory = [];
+
+    // Default Fallback Template JSON for new users
+    const defaultJson = {
+      exercises: [
+        {
+          id: "barbell-squat",
+          title: "اسکات هالتر از پشت",
+          description: "کمر صاف باشد، با افت پاها تا زاویه ۹۰ درجه حرکت را کنترل‌شده انجام دهید.",
+          images: [
+            "https://images.unsplash.com/photo-1574680096145-d05b474e2155?auto=format&fit=crop&w=900&q=85",
+            "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=900&q=85"
+          ],
+          weeklySets: 4
+        },
+        {
+          id: "push-up",
+          title: "شنا سوئدی (Push-up)",
+          description: "بدن کاملاً مستقیم، انقباض سینه در بالاترین نقطه حرکت.",
+          images: [
+            "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&w=900&q=85"
+          ],
+          weeklySets: 3
+        }
+      ]
+    };
+
+    // ----------------------------------------------------
+    // UTILITY FUNCTIONS
+    // ----------------------------------------------------
+    const persianDigits = value => String(value).replace(/\d/g, digit => "۰۱۲۳۴۵۶۷۸۹"[digit]);
+
+    function formatNumber(value) {
+      return persianDigits(value);
+    }
+
+    function formatDuration(milliseconds) {
+      const totalHours = Math.floor(Math.abs(milliseconds) / (60 * 60 * 1000));
+      const days = Math.floor(totalHours / 24);
+      const hours = totalHours % 24;
+
+      if (days > 0) {
+        return `${formatNumber(days)} روز و ${formatNumber(hours)} ساعت`;
+      }
+      return `${formatNumber(hours)} ساعت`;
+    }
+
+    function formatDateTime(timestamp) {
+      if (!timestamp) return "-";
+      return new Intl.DateTimeFormat("fa-IR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
+      }).format(new Date(timestamp));
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    // ----------------------------------------------------
+    // LOCAL STORAGE PERSISTENCE ENGINE
+    // ----------------------------------------------------
+    function loadStateFromStorage() {
+      try {
+        const rawData = localStorage.getItem(STORAGE_KEY);
+        if (rawData) {
+          const parsed = JSON.parse(rawData);
+          weeklySetTasks = parsed.weeklySetTasks || [];
+          uploadTimestamp = parsed.uploadTimestamp || null;
+          deadlineTimestamp = parsed.deadlineTimestamp || null;
+          userProfile = parsed.userProfile || null;
+          userHistory = parsed.userHistory || [];
+        }
+      } catch (e) {
+        console.error("Error loading local storage state", e);
+      }
+    }
+
+    function saveStateToStorage() {
+      try {
+        const payload = {
+          weeklySetTasks,
+          uploadTimestamp,
+          deadlineTimestamp,
+          userProfile,
+          userHistory
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      } catch (e) {
+        console.error("Error saving state to local storage", e);
+      }
+    }
+
+    // ----------------------------------------------------
+    // PROFILE MANAGEMENT MODAL
+    // ----------------------------------------------------
+    function openProfileModal() {
+      if (userProfile) {
+        document.getElementById("profHeight").value = userProfile.height || "";
+        document.getElementById("profAge").value = userProfile.age || "";
+        document.getElementById("profGender").value = userProfile.gender || "مرد";
+        document.getElementById("profGoal").value = userProfile.goal || "عضله‌سازی و هیپرتروفی";
+        document.getElementById("profBaseWeight").value = userProfile.baseWeight || "";
+        document.getElementById("profBaseWaist").value = userProfile.baseWaist || "";
+        document.getElementById("profExp").value = userProfile.experience || "متوسط (6 ماه تا 2 سال)";
+        document.getElementById("profDays").value = userProfile.daysPerWeek || "4 روز در هفته";
+        document.getElementById("profEquipment").value = userProfile.equipment || "";
+        document.getElementById("profLimitations").value = userProfile.limitations || "";
+      }
+      toggleProfileModal(true);
+    }
+
+    function toggleProfileModal(show) {
+      const modal = document.getElementById("profileModal");
+      if (show) {
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+      } else {
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+      }
+    }
+
+    function saveUserProfile(event) {
+      event.preventDefault();
+      userProfile = {
+        height: document.getElementById("profHeight").value,
+        age: document.getElementById("profAge").value,
+        gender: document.getElementById("profGender").value,
+        goal: document.getElementById("profGoal").value,
+        baseWeight: document.getElementById("profBaseWeight").value,
+        baseWaist: document.getElementById("profBaseWaist").value,
+        experience: document.getElementById("profExp").value,
+        daysPerWeek: document.getElementById("profDays").value,
+        equipment: document.getElementById("profEquipment").value,
+        limitations: document.getElementById("profLimitations").value
+      };
+
+      saveStateToStorage();
+      toggleProfileModal(false);
+      
+      // If modal opened during flow, proceed to weekly review
+      handleOpenModal();
+    }
+
+    // ----------------------------------------------------
+    // WEEKLY REVIEW & JSON MODAL FLOW
+    // ----------------------------------------------------
+    function handleOpenModal() {
+      if (!userProfile) {
+        openProfileModal();
+        return;
+      }
+
+      const weeklyNotice = document.getElementById("weekStatusNotice");
+      const weeklyForm = document.getElementById("weeklyFormSection");
+      const aiPrompt = document.getElementById("aiPromptSection");
+
+      aiPrompt.classList.add("hidden");
+
+      if (uploadTimestamp) {
+        const timeElapsed = Date.now() - uploadTimestamp;
+        if (timeElapsed >= WEEK_DURATION_MS) {
+          weeklyNotice.innerHTML = `
+            <i class="fas fa-triangle-exclamation text-amber-400 ml-1"></i>
+            یک هفته یا بیشتر از آخرین برنامه تمرینی شما گذشته است. لطفاً سنجش جدید را وارد کنید.
+          `;
+          weeklyNotice.className = "rounded-2xl bg-amber-500/10 border border-amber-500/20 p-3 text-xs leading-6 text-amber-300";
+        } else {
+          const remainingDays = Math.ceil((WEEK_DURATION_MS - timeElapsed) / (24 * 60 * 60 * 1000));
+          weeklyNotice.innerHTML = `
+            <i class="fas fa-info-circle text-emerald-400 ml-1"></i>
+            هنوز ${formatNumber(remainingDays)} روز از هفته تمرینی جاری باقی مانده است. (می‌توانید زودتر هم بروزرسانی کنید).
+          `;
+          weeklyNotice.className = "rounded-2xl bg-emerald-500/10 border border-emerald-500/20 p-3 text-xs leading-6 text-emerald-300";
+        }
+      }
+
+      toggleJsonModal(true);
+    }
+
+    function toggleJsonModal(show) {
+      const modal = document.getElementById("jsonModal");
+      if (show) {
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+      } else {
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+        hideJsonError();
+      }
+    }
+
+    function generatePromptForAi() {
+      const weight = document.getElementById("userWeight").value.trim();
+      const waist = document.getElementById("userWaist").value.trim();
+      const sleep = document.getElementById("userSleep").value;
+      const energy = document.getElementById("userEnergy").value;
+      const rpe = document.getElementById("userRpe").value;
+      const pain = document.getElementById("userPain").value.trim() || "بدون درد و آسیب جدید";
+      const feedback = document.getElementById("userFeedback").value.trim() || "ثبت نشده";
+
+      if (!weight || !waist) {
+        showJsonError("لطفاً فیلدهای وزن و دور کمر جدید را پر کنید.");
+        return;
+      }
+
+      hideJsonError();
+
+      const weekNumber = userHistory.length + 1;
+      const historySummary = userHistory.map(h => ({
+        week: h.week,
+        date: h.date,
+        body: h.body,
+        recovery: h.recovery,
+        completionRate: h.training ? h.training.completionRate + "%" : "100%",
+        feedback: h.feedback
+      }));
+
+      const promptText = `تو یک مربی ارشد و حرفه‌ای بدنسازی و فیتنس هستی.
+من یک هفته برنامه تمرینی قبلی را کامل کرده‌ام. اطلاعات سنجش بدنی و ریکاوری هفته اخیر من:
+
+- هفته: ${weekNumber}
+- وزن جدید: ${weight} کیلوگرم
+- دور کمر جدید: ${waist} سانتی‌متر
+- میانگین خواب شبانه‌روز: ${sleep}
+- سطح انرژی بدنی (1 تا 10): ${energy}
+- میزان سختی تمرین / RPE (1 تا 10): ${rpe}
+- وضع دردهای جدید یا عضلانی: ${pain}
+- بازخورد و حس کار با برنامه قبلی: ${feedback}
+
+شناسنامه اولیه من:
+- قد: ${userProfile ? userProfile.height : "-"} cm | سن: ${userProfile ? userProfile.age : "-"} | جنسیت: ${userProfile ? userProfile.gender : "-"}
+- هدف اصلی: ${userProfile ? userProfile.goal : "-"}
+- سابقه تمرینی: ${userProfile ? userProfile.experience : "-"}
+- روزهای تمرین در هفته: ${userProfile ? userProfile.daysPerWeek : "-"}
+- تجهیزات در دسترس: ${userProfile ? userProfile.equipment : "-"}
+- آسیب‌های قبلی: ${userProfile ? userProfile.limitations : "-"}
+
+تاریخچه پیشرفت هفته‌های گذشته من:
+${JSON.stringify(historySummary, null, 2)}
+
+دستورالعمل مهم جهت طراحی برنامه جدید:
+۱. لطفاً در ابتدا از من بخواه سه عکس جدید از بدنم (۱. روبرو، ۲. از بغل، ۳. از پشت) با لباس مناسب، نور خوب و بدون فیلتر برات بفرستم.
+۲. پس از دریافت عکس‌ها، روند تغییرات ظاهری، وزن، دور کمر، خواب، انرژی و بازخوردهای من را دقیقاً مقایسه کن.
+۳. در صورت ضرورت، شدت (RPE)، تعداد ست‌ها یا حجم تمرین را تنطیم کرده یا در صورت نیاز هفته دِلود (Deload) تجویز کن.
+۴. خروجی نهایی برنامه تمرینی هفته جدید را فقط و فقط در قالب یک آبجکت معتبر JSON مطابق ساختار زیر ارسال کن (بدون هیچ متن اضافی قبل یا بعد از کد):
+
+{
+  "exercises": [
+    {
+      "id": "شناسه انگلیسی حرکت",
+      "title": "نام فارسی حرکت",
+      "description": "توضیحات کامل تکنیک اجرای صحیح",
+      "images": ["لینک تصویر 1", "لینک تصویر 2"],
+      "weeklySets": 4
+    }
+  ]
+}`;
+
+      const aiPromptTextarea = document.getElementById("aiPromptTextarea");
+      aiPromptTextarea.value = promptText;
+
+      const aiPromptSection = document.getElementById("aiPromptSection");
+      aiPromptSection.classList.remove("hidden");
+      aiPromptSection.classList.add("flex");
+    }
+
+    function copyPromptText() {
+      const textElement = document.getElementById("aiPromptTextarea");
+      textElement.select();
+      textElement.setSelectionRange(0, 99999);
+      navigator.clipboard.writeText(textElement.value);
+
+      const btn = document.getElementById("copyPromptBtn");
+      btn.innerHTML = '<i class="fas fa-check text-emerald-950"></i><span>کپی شد!</span>';
+      setTimeout(() => {
+        btn.innerHTML = '<i class="fas fa-copy"></i><span>کپی متن پرامپت</span>';
+      }, 2000);
+    }
+
+    // ----------------------------------------------------
+    // TAB SWITCHING
+    // ----------------------------------------------------
+    function switchTab(tab) {
+      currentTab = tab;
+
+      const queueTab = document.getElementById("queueTab");
+      const doneTab = document.getElementById("doneTab");
+      const queueList = document.getElementById("queueList");
+      const doneList = document.getElementById("doneList");
+
+      if (tab === "queue") {
+        queueTab.className = "border-b-2 border-emerald-500 py-3 text-xs font-bold text-emerald-400 transition flex items-center justify-center gap-1.5";
+        doneTab.className = "border-b-2 border-transparent py-3 text-xs font-bold text-slate-400 transition hover:text-slate-200 flex items-center justify-center gap-1.5";
+        queueList.classList.remove("hidden");
+        doneList.classList.add("hidden");
+      } else {
+        doneTab.className = "border-b-2 border-emerald-500 py-3 text-xs font-bold text-emerald-400 transition flex items-center justify-center gap-1.5";
+        queueTab.className = "border-b-2 border-transparent py-3 text-xs font-bold text-slate-400 transition hover:text-slate-200 flex items-center justify-center gap-1.5";
+        doneList.classList.remove("hidden");
+        queueList.classList.add("hidden");
+      }
+    }
+
+    function showJsonError(message) {
+      const errorBox = document.getElementById("jsonError");
+      errorBox.textContent = message;
+      errorBox.classList.remove("hidden");
+    }
+
+    function hideJsonError() {
+      const errorBox = document.getElementById("jsonError");
+      errorBox.textContent = "";
+      errorBox.classList.add("hidden");
+    }
+
+    // ----------------------------------------------------
+    // IMPORT JSON PROGRAM & ARCHIVE HISTORY
+    // ----------------------------------------------------
+    function importJson() {
+      hideJsonError();
+
+      const raw = document.getElementById("jsonInput").value.trim();
+
+      if (!raw) {
+        showJsonError("لطفاً اطلاعات JSON برنامه را وارد کنید.");
+        return;
+      }
+
+      let data;
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        showJsonError("فرمت JSON نامعتبر است. ساختار پاست شده را بررسی کنید.");
+        return;
+      }
+
+      if (!Array.isArray(data.exercises)) {
+        showJsonError("ساختار JSON باید شامل کلید exercises به صورت آرایه باشد.");
+        return;
+      }
+
+      const generatedTasks = [];
+
+      for (const exercise of data.exercises) {
+        const sets = Number(exercise.weeklySets);
+
+        if (!exercise.id || !exercise.title || !Number.isInteger(sets) || sets <= 0) {
+          showJsonError("هر حرکت باید شامل id، title و weeklySets معتبر و بزرگتر از صفر باشد.");
+          return;
+        }
+
+        const images = Array.isArray(exercise.images)
+          ? exercise.images.filter(image => typeof image === "string" && image.trim())
+          : [];
+
+        for (let index = 1; index <= sets; index += 1) {
+          generatedTasks.push({
+            taskId: `${exercise.id}-set-${index}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+            exerciseId: exercise.id,
+            title: exercise.title,
+            description: exercise.description || "",
+            images,
+            setNumber: index,
+            totalSets: sets,
+            completed: false
+          });
+        }
+      }
+
+      // Archive Current Week Session into History if there were active tasks
+      if (weeklySetTasks.length > 0) {
+        const doneCount = weeklySetTasks.filter(t => t.completed).length;
+        const totalCount = weeklySetTasks.length;
+        const weightInput = document.getElementById("userWeight").value.trim();
+        const waistInput = document.getElementById("userWaist").value.trim();
+
+        const historyRecord = {
+          week: userHistory.length + 1,
+          date: new Date().toISOString().split("T")[0],
+          body: {
+            weight: weightInput ? Number(weightInput) : (userProfile ? Number(userProfile.baseWeight) : 0),
+            waist: waistInput ? Number(waistInput) : (userProfile ? Number(userProfile.baseWaist) : 0)
+          },
+          recovery: {
+            sleep: document.getElementById("userSleep").value,
+            energy: document.getElementById("userEnergy").value,
+            rpe: document.getElementById("userRpe").value,
+            pain: document.getElementById("userPain").value.trim() || "بدون درد"
+          },
+          training: {
+            completedSets: doneCount,
+            totalSets: totalCount,
+            completionRate: totalCount ? Math.round((doneCount / totalCount) * 100) : 100
+          },
+          feedback: document.getElementById("userFeedback").value.trim() || "تمرینات هفته تکمیل شد",
+          programSummary: {
+            exerciseCount: data.exercises.length,
+            totalSets: generatedTasks.length
+          }
+        };
+
+        userHistory.push(historyRecord);
+      }
+
+      uploadTimestamp = Date.now();
+      deadlineTimestamp = uploadTimestamp + WEEK_DURATION_MS;
+      weeklySetTasks = generatedTasks;
+
+      saveStateToStorage();
+      toggleJsonModal(false);
+      switchTab("queue");
+      render();
+      updateDeadlineMessage();
+    }
+
+    // ----------------------------------------------------
+    // TASK ACTION HANDLERS
+    // ----------------------------------------------------
+    function markTaskDone(taskId) {
+      const task = weeklySetTasks.find(item => item.taskId === taskId);
+      if (task) {
+        task.completed = true;
+        saveStateToStorage();
+        render();
+        updateDeadlineMessage();
+      }
+    }
+
+    function moveTaskBackToQueue(taskId) {
+      const task = weeklySetTasks.find(item => item.taskId === taskId);
+      if (task) {
+        task.completed = false;
+        saveStateToStorage();
+        render();
+        updateDeadlineMessage();
+      }
+    }
+
+    // ----------------------------------------------------
+    // CLOCK & DEADLINE TIMER
+    // ----------------------------------------------------
+    function updateClock() {
+      document.getElementById("currentTime").textContent =
+        new Intl.DateTimeFormat("fa-IR", {
+          hour: "2-digit",
+          minute: "2-digit"
+        }).format(new Date());
+    }
+
+    function updateDeadlineMessage() {
+      const banner = document.getElementById("deadlineBanner");
+      const icon = document.getElementById("deadlineIcon");
+      const message = document.getElementById("deadlineMessage");
+      const uploadLabel = document.getElementById("uploadTimeLabel");
+      const deadlineLabel = document.getElementById("deadlineLabel");
+
+      if (!deadlineTimestamp) {
+        uploadLabel.textContent = "شروع: -";
+        deadlineLabel.textContent = "پایان: -";
+        message.textContent = "برنامه‌ای فعال نشده است";
+        return;
+      }
+
+      const now = Date.now();
+      const remaining = deadlineTimestamp - now;
+      const completedCount = weeklySetTasks.filter(task => task.completed).length;
+      const totalCount = weeklySetTasks.length;
+      const allCompleted = totalCount > 0 && completedCount === totalCount;
+
+      uploadLabel.textContent = `شروع: ${formatDateTime(uploadTimestamp)}`;
+      deadlineLabel.textContent = `پایان: ${formatDateTime(deadlineTimestamp)}`;
+
+      banner.className = "mt-3.5 rounded-2xl p-3 transition-all duration-300 border ";
+      icon.className = "text-lg shrink-0 ";
+      message.className = "text-xs font-bold leading-5 truncate ";
+
+      if (allCompleted && remaining > 0) {
+        banner.classList.add("border-emerald-500/30", "bg-emerald-500/10");
+        icon.classList.add("text-emerald-400");
+        message.classList.add("text-emerald-300");
+        icon.innerHTML = '<i class="fas fa-circle-check"></i>';
+        message.textContent = "تمام حرکات این هفته رو انجام دادی! ریکاوری کن عالی بود 👏";
+        return;
+      }
+
+      if (remaining > 0) {
+        banner.classList.add("border-amber-500/30", "bg-amber-500/10");
+        icon.classList.add("text-amber-400");
+        message.classList.add("text-amber-300");
+        icon.innerHTML = '<i class="fas fa-hourglass-half"></i>';
+        message.textContent = `${formatDuration(remaining)} فرصت باقی‌مانده هفته`;
+        return;
+      }
+
+      if (allCompleted) {
+        banner.classList.add("border-emerald-500/30", "bg-emerald-500/10");
+        icon.classList.add("text-emerald-400");
+        message.classList.add("text-emerald-300");
+        icon.innerHTML = '<i class="fas fa-circle-check"></i>';
+        message.textContent = "همه حرکات این هفته انجام شدند؛ هفته با موفقیت پایان یافت";
+        return;
+      }
+
+      banner.classList.add("border-rose-500/30", "bg-rose-500/10", "urgent-pulse");
+      icon.classList.add("text-rose-400");
+      message.classList.add("text-rose-300");
+      icon.innerHTML = '<i class="fas fa-triangle-exclamation"></i>';
+      message.textContent = `${formatDuration(remaining)} تاخیر در تکمیل برنامه هفتگی`;
+    }
+
+    // ----------------------------------------------------
+    // RENDERING ENGINE
+    // ----------------------------------------------------
+    function render() {
+      const queueList = document.getElementById("queueList");
+      const doneList = document.getElementById("doneList");
+      const emptyState = document.getElementById("emptyState");
+
+      const queueItems = weeklySetTasks.filter(task => !task.completed);
+      const doneItems = weeklySetTasks.filter(task => task.completed);
+
+      document.getElementById("queueCount").textContent = `(${formatNumber(queueItems.length)})`;
+      document.getElementById("doneCount").textContent = `(${formatNumber(doneItems.length)})`;
+
+      const total = weeklySetTasks.length;
+      const progress = total ? Math.round((doneItems.length / total) * 100) : 0;
+
+      document.getElementById("progressText").textContent = `${formatNumber(progress)}٪`;
+      document.getElementById("progressBar").style.width = `${progress}%`;
+
+      if (total === 0) {
+        queueList.innerHTML = "";
+        doneList.innerHTML = "";
+        emptyState.classList.remove("hidden");
+        return;
+      }
+
+      emptyState.classList.add("hidden");
+      queueList.innerHTML = queueItems.map(renderTaskCard).join("");
+      doneList.innerHTML = doneItems.map(renderTaskCard).join("");
+    }
+
+    function renderTaskCard(task) {
+      const title = escapeHtml(task.title);
+      const description = escapeHtml(task.description);
+      const exerciseId = escapeHtml(task.exerciseId);
+
+      const imagesMarkup = task.images.length
+        ? `
+          <div class="relative aspect-video w-full overflow-hidden bg-slate-900">
+            <div
+              id="carousel-${task.taskId}"
+              class="hide-scrollbar flex h-full w-full snap-x snap-mandatory overflow-x-auto scroll-smooth"
+              onscroll="updateIndicator('${task.taskId}')"
+            >
+              ${task.images.map((image, index) => `
+                <div class="relative h-full w-full shrink-0 snap-start">
+                  <img
+                    src="${escapeHtml(image)}"
+                    alt="${title}"
+                    class="h-full w-full select-none object-cover"
+                    onerror="this.parentElement.innerHTML='<div class=\\'flex h-full items-center justify-center text-slate-600 bg-slate-900\\'><i class=\\'fas fa-image text-3xl opacity-40\\'></i></div>'"
+                  />
+                </div>
+              `).join("")}
+            </div>
+
+            ${
+              task.images.length > 1
+                ? `
+                  <div class="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 gap-1.5 rounded-full bg-black/70 px-2 py-1 backdrop-blur-sm">
+                    ${task.images.map((_, index) => `
+                      <span
+                        id="dot-${task.taskId}-${index}"
+                        class="${index === 0 ? "h-1.5 w-3 bg-emerald-400" : "h-1.5 w-1.5 bg-slate-500"} rounded-full transition-all"
+                      ></span>
+                    `).join("")}
+                  </div>
+                `
+                : ""
+            }
+          </div>
+        `
+        : `
+          <div class="flex aspect-video w-full flex-col items-center justify-center gap-2 border-b border-slate-900 bg-slate-900/60 text-slate-600">
+            <i class="fas fa-image text-3xl opacity-30"></i>
+            <span class="text-[10px]">تصویری ثبت نشده است</span>
+          </div>
+        `;
+
+      const actionButton = task.completed
+        ? `
+          <button
+            type="button"
+            onclick="moveTaskBackToQueue('${task.taskId}')"
+            class="rounded-xl bg-amber-500/10 border border-amber-500/20 px-3.5 py-2 text-xs font-bold text-amber-400 transition hover:bg-amber-500/20 active:scale-95"
+          >
+            <i class="fas fa-undo ml-1"></i>
+            بازگردانی به صف
+          </button>
+        `
+        : `
+          <button
+            type="button"
+            onclick="markTaskDone('${task.taskId}')"
+            class="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 px-4 py-2 text-xs font-extrabold text-slate-950 shadow-md shadow-emerald-500/15 transition hover:brightness-110 active:scale-95 flex items-center gap-1.5"
+          >
+            <i class="fas fa-check text-xs"></i>
+            انجام شد
+          </button>
+        `;
+
+      return `
+        <article class="w-full bg-slate-950">
+          ${imagesMarkup}
+
+          <div class="flex flex-col gap-2.5 p-4">
+            <div>
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-black leading-6 text-white">
+                  ${title}
+                </h3>
+                <span class="rounded-md border border-slate-800 bg-slate-900 px-2 py-0.5 font-mono text-[10px] text-emerald-400 font-bold">
+                  ست ${formatNumber(task.setNumber)} از ${formatNumber(task.totalSets)}
+                </span>
+              </div>
+            </div>
+
+            <p class="text-justify text-xs leading-6 text-slate-400 font-normal">
+              ${description || "توضیحی ثبت نشده است."}
+            </p>
+
+            <div class="mt-1 flex items-center justify-between border-t border-slate-900 pt-3">
+              ${actionButton}
+              <span class="font-mono text-[10px] text-slate-600">${exerciseId}</span>
+            </div>
+          </div>
+        </article>
+      `;
+    }
+
+    function updateIndicator(taskId) {
+      const carousel = document.getElementById(`carousel-${taskId}`);
+      if (!carousel || carousel.offsetWidth === 0) return;
+
+      const activeIndex = Math.round(carousel.scrollLeft / carousel.offsetWidth);
+      const task = weeklySetTasks.find(item => item.taskId === taskId);
+      if (!task) return;
+
+      task.images.forEach((_, index) => {
+        const dot = document.getElementById(`dot-${taskId}-${index}`);
+        if (dot) {
+          dot.className = index === activeIndex
+            ? "h-1.5 w-3 rounded-full bg-emerald-400 transition-all"
+            : "h-1.5 w-1.5 rounded-full bg-slate-500 transition-all";
+        }
+      });
+    }
+
+    // ----------------------------------------------------
+    // HISTORY MODAL & ANALYTICS
+    // ----------------------------------------------------
+    function toggleHistoryModal(show) {
+      const modal = document.getElementById("historyModal");
+      if (show) {
+        renderHistoryTimeline();
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
+      } else {
+        modal.classList.add("hidden");
+        modal.classList.remove("flex");
+      }
+    }
+
+    function renderHistoryTimeline() {
+      const statsBox = document.getElementById("historyStatsContainer");
+      const timelineBox = document.getElementById("historyTimeline");
+
+      const totalWeeks = userHistory.length;
+      const baseW = userProfile ? userProfile.baseWeight : (userHistory.length ? userHistory[0].body.weight : "-");
+      const latestW = userHistory.length ? userHistory[userHistory.length - 1].body.weight : baseW;
+
+      statsBox.innerHTML = `
+        <div class="rounded-2xl border border-slate-800 bg-slate-950 p-3 text-center">
+          <span class="block text-[10px] text-slate-500 font-bold">هفته‌های ثبت‌شده</span>
+          <span class="block text-base font-black text-emerald-400 mt-0.5">${formatNumber(totalWeeks)}</span>
+        </div>
+        <div class="rounded-2xl border border-slate-800 bg-slate-950 p-3 text-center">
+          <span class="block text-[10px] text-slate-500 font-bold">وزن شروع</span>
+          <span class="block text-base font-black text-slate-300 mt-0.5">${formatNumber(baseW)} kg</span>
+        </div>
+        <div class="rounded-2xl border border-slate-800 bg-slate-950 p-3 text-center">
+          <span class="block text-[10px] text-slate-500 font-bold">آخرین وزن</span>
+          <span class="block text-base font-black text-emerald-400 mt-0.5">${formatNumber(latestW)} kg</span>
+        </div>
+      `;
+
+      if (userHistory.length === 0) {
+        timelineBox.innerHTML = `
+          <div class="p-6 text-center text-xs text-slate-500">
+            هنوز تاریخچه‌ای ثبت نشده است. پس از پایان هفته اول، گزارش‌ها اینجا ذخیره می‌شوند.
+          </div>
+        `;
+        return;
+      }
+
+      timelineBox.innerHTML = userHistory.map((item) => `
+        <div class="rounded-2xl border border-slate-800 bg-slate-950 p-4 flex flex-col gap-2">
+          <div class="flex items-center justify-between border-b border-slate-900 pb-2">
+            <span class="text-xs font-extrabold text-emerald-400">هفته ${formatNumber(item.week)}</span>
+            <span class="text-[10px] text-slate-500 font-mono">${item.date}</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-xs text-slate-300">
+            <div>وزن: <strong class="text-white">${formatNumber(item.body.weight)} kg</strong></div>
+            <div>دور کمر: <strong class="text-white">${formatNumber(item.body.waist)} cm</strong></div>
+            <div>تکمیل ست‌ها: <strong class="text-emerald-400">${formatNumber(item.training.completionRate)}٪</strong></div>
+            <div>انرژی / RPE: <strong class="text-amber-400">${formatNumber(item.recovery.energy)} / ${formatNumber(item.recovery.rpe)}</strong></div>
+          </div>
+
+          <p class="text-[11px] text-slate-400 border-t border-slate-900 pt-2 leading-5">
+            <strong class="text-slate-300">بازخورد:</strong> ${escapeHtml(item.feedback)}
+          </p>
+        </div>
+      `).join("");
+    }
+
+    function exportDataBackup() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(localStorage.getItem(STORAGE_KEY) || "{}");
+      const downloadAnchor = document.createElement("a");
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `fit_by_ai_backup_${new Date().toISOString().split("T")[0]}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    function resetAllAppData() {
+      if (confirm("آیا از پاک کردن تمام داده‌ها و تاریخچه برنامه مطمئن هستید؟")) {
+        localStorage.removeItem(STORAGE_KEY);
+        location.reload();
+      }
+    }
+
+    // ----------------------------------------------------
+    // INITIALIZATION
+    // ----------------------------------------------------
+    loadStateFromStorage();
+
+    // Default Json in input box
+    document.getElementById("jsonInput").value = JSON.stringify(defaultJson, null, 2);
+
+    setInterval(() => {
+      updateClock();
+      updateDeadlineMessage();
+    }, 1000);
+
+    updateClock();
+
+    if (weeklySetTasks.length > 0) {
+      render();
+      updateDeadlineMessage();
+    } else {
+      // First time initialization
+      importJson();
+    }
+  </script>
+</body>
+</html>
