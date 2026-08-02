@@ -361,7 +361,7 @@ fun DeadlineBanner(deadlineTimestamp: Long?, tasks: List<WorkoutTaskEntity>) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Icon(Icons.Default.HourglassHalf, contentDescription = null, tint = textColor)
+            Icon(Icons.Default.HourglassEmpty, contentDescription = null, tint = textColor)
             Text(message, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = textColor)
         }
     }

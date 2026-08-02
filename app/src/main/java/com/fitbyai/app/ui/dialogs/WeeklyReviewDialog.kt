@@ -140,7 +140,7 @@ fun WeeklyReviewDialog(
                     Text("🤖 تولید پرامپت هوش مصنوعی (درخواست عکس + تاریخچه)", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
                 }
 
-                if (!generatedPrompt.isNull_orBlank()) {
+                if (!generatedPrompt.isNullOrBlank()) {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
                         modifier = Modifier.fillMaxWidth()
@@ -153,7 +153,7 @@ fun WeeklyReviewDialog(
                                 color = MaterialTheme.colorScheme.primary
                             )
                             OutlinedTextField(
-                                value = generatedPrompt,
+                                value = generatedPrompt ?: "",
                                 onValueChange = {},
                                 readOnly = true,
                                 modifier = Modifier
@@ -196,9 +196,9 @@ fun WeeklyReviewDialog(
                     textStyle = LocalTextStyle.current.copy(fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 )
 
-                if (!errorMessage.isNull_orBlank()) {
+                if (!errorMessage.isNullOrBlank()) {
                     Text(
-                        text = errorMessage,
+                        text = errorMessage ?: "",
                         color = MaterialTheme.colorScheme.error,
                         fontSize = 11.sp
                     )

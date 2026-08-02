@@ -3,8 +3,8 @@ package com.fitbyai.app.data
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverter
-import com.google.code.gson.Gson
-import com.google.code.gson.reflect.TypeToken
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 
 @Entity(tableName = "user_profile")
 data class UserProfileEntity(
@@ -60,12 +60,12 @@ data class WeeklyMetadataEntity(
 
 class StringListConverter {
     @TypeConverter
-    fromList(list: List<String>): String {
+    fun fromList(list: List<String>): String {
         return Gson().toJson(list)
     }
 
     @TypeConverter
-    toList(data: String): List<String> {
+    fun toList(data: String): List<String> {
         val listType = object : TypeToken<List<String>>() {}.type
         return Gson().fromJson(data, listType) ?: emptyList()
     }

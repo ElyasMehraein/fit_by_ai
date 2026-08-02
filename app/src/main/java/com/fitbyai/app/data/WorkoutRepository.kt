@@ -1,7 +1,7 @@
 package com.fitbyai.app.data
 
-import com.google.code.gson.Gson
-import com.google.code.gson.annotations.SerializedName
+import com.google.gson.Gson
+import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.flow.Flow
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -152,7 +152,7 @@ ${gson.toJson(historySummary)}
             val newTasks = mutableListOf<WorkoutTaskEntity>()
             val now = System.currentTimeMillis()
 
-            for (ex in payload.exercises) {
+            payload.exercises.forEach { ex ->
                 if (ex.weeklySets <= 0 || ex.id.isBlank() || ex.title.isBlank()) {
                     return Result.failure(Exception("اطلاعات id، title و weeklySets معتبر نیستند."))
                 }
