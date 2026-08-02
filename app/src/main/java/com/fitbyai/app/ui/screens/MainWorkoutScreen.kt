@@ -54,21 +54,12 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Surface(
-                            modifier = Modifier.size(40.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            tonalElevation = 3.dp
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_app_logo),
-                                contentDescription = "Fit by AI Logo",
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(RoundedCornerShape(12.dp)),
-                                contentScale = ContentScale.Crop
-                            )
-                        }
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_app_logo),
+                            contentDescription = "Fit by AI Logo",
+                            modifier = Modifier.size(36.dp),
+                            contentScale = ContentScale.Fit
+                        )
                         Column(horizontalAlignment = Alignment.Start) {
                             Text(
                                 text = "Fit by AI",
