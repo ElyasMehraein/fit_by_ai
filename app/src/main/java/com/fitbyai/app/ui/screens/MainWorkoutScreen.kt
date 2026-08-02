@@ -26,6 +26,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -51,7 +53,8 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
     var showReviewDialog by remember { mutableStateOf(false) }
     var showHistoryDialog by remember { mutableStateOf(false) }
 
-    Scaffold(
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
@@ -236,6 +239,7 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
             }
         )
     }
+}
 }
 
 @Composable
