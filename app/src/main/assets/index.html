@@ -23,6 +23,11 @@
       -webkit-tap-highlight-color: transparent;
     }
 
+    input, textarea {
+      user-select: text !important;
+      -webkit-user-select: text !important;
+    }
+
     body {
       font-family: "Vazirmatn", sans-serif;
       background: #020617;
@@ -103,16 +108,6 @@
             class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-800 text-slate-300 transition hover:bg-slate-750 hover:text-emerald-400 active:scale-95 border border-slate-700/60"
           >
             <i class="fas fa-clock-rotate-left"></i>
-          </button>
-
-          <!-- Weekly Review & JSON Modal Button -->
-          <button
-            type="button"
-            onclick="handleOpenModal()"
-            title="بروزرسانی برنامه هفتگی"
-            class="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-emerald-500 to-emerald-400 text-slate-950 shadow-lg shadow-emerald-500/25 transition hover:brightness-110 active:scale-95 font-bold"
-          >
-            <i class="fas fa-wand-magic-sparkles"></i>
           </button>
         </div>
       </div>
@@ -416,7 +411,7 @@
             class="w-full rounded-xl bg-slate-800 py-3 text-xs font-bold text-emerald-400 border border-emerald-500/20 hover:bg-slate-750 transition flex items-center justify-center gap-2"
           >
             <i class="fas fa-robot"></i>
-            تولید پرامپت هوش مصنوعی (شامل درخواست عکس و تاریخچه)
+            تولید پرامپت هوش مصنوعی (شامل درخواست عکس هیکل و تاریخچه)
           </button>
         </div>
 
@@ -448,10 +443,17 @@
 
         <!-- Section C: JSON Importer Input -->
         <div class="flex flex-col gap-2">
-          <label class="block text-xs text-slate-300 font-bold flex items-center justify-between">
-            <span>ورود ساختار برنامه تمرین (JSON)</span>
-            <span class="text-[10px] text-slate-500">پاسخ هوش مصنوعی را اینجا Paste کنید</span>
-          </label>
+          <div class="flex items-center justify-between">
+            <label class="block text-xs text-slate-300 font-bold">ورود ساختار برنامه تمرین (JSON)</label>
+            <button
+              type="button"
+              onclick="pasteClipboardToJsonInput()"
+              class="px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/20 hover:bg-emerald-500/25 transition flex items-center gap-1.5 active:scale-95"
+            >
+              <i class="fas fa-paste"></i>
+              <span>چسباندن</span>
+            </button>
+          </div>
 
           <textarea
             id="jsonInput"
@@ -774,10 +776,12 @@
 ${JSON.stringify(historySummary, null, 2)}
 
 دستورالعمل مهم جهت طراحی برنامه جدید:
-۱. لطفاً در ابتدا از من بخواه سه عکس جدید از بدنم (۱. روبرو، ۲. از بغل، ۳. از پشت) با لباس مناسب، نور خوب و بدون فیلتر برات بفرستم.
-۲. پس از دریافت عکس‌ها، روند تغییرات ظاهری، وزن، دور کمر، خواب، انرژی و بازخوردهای من را دقیقاً مقایسه کن.
-۳. در صورت ضرورت، شدت (RPE)، تعداد ست‌ها یا حجم تمرین را تنطیم کرده یا در صورت نیاز هفته دِلود (Deload) تجویز کن.
-۴. خروجی نهایی برنامه تمرینی هفته جدید را فقط و فقط در قالب یک آبجکت معتبر JSON مطابق ساختار زیر ارسال کن (بدون هیچ متن اضافی قبل یا بعد از کد):
+۱. لطفاً در ابتدا از من بخواه یک عکس جدید از هیکلم با لباس مناسب، نور خوب و بدون فیلتر برات بفرستم.
+۲. پس از دریافت عکس، روند تغییرات ظاهری، وزن، دور کمر، خواب، انرژی و بازخوردهای من را دقیقاً مقایسه کن.
+۳. در صورت ضرورت، شدت (RPE)، تعداد ست‌ها یا حجم تمرین را تنظیم کرده یا در صورت نیاز هفته دِلود (Deload) تجویز کن.
+۴. برنامه تمرینی کلاً به‌صورت یک بانک/حجم کلی ست‌های هفتگی (Weekly Sets) باشد و به روزهای خاص تقسیم نشود؛ به طوری که کاربر مختار باشد تمام ست‌ها را در ۱ روز بزند یا بین ۲ تا ۶ روز تقسیم کند و محدودیتی نداشته باشد.
+۵. لینک تصاویر حرکات تمرینی (images) حتماً باید لینک مستقیم و معتبر با پسوند متداول تصویری (مانند .jpg، .png یا .webp) و از منابع معتبر ورزشی یا اینترنتی (مانند Unsplash، Wikimedia و ...) باشند.
+۶. خروجی نهایی برنامه تمرینی هفته جدید را فقط و فقط در قالب یک آبجکت معتبر JSON مطابق ساختار زیر ارسال کن (بدون هیچ متن اضافی قبل یا بعد از کد):
 
 {
   "exercises": [
@@ -785,7 +789,7 @@ ${JSON.stringify(historySummary, null, 2)}
       "id": "شناسه انگلیسی حرکت",
       "title": "نام فارسی حرکت",
       "description": "توضیحات کامل تکنیک اجرای صحیح",
-      "images": ["لینک تصویر 1", "لینک تصویر 2"],
+      "images": ["https://images.unsplash.com/photo-example.jpg", "https://commons.wikimedia.org/example.png"],
       "weeklySets": 4
     }
   ]
@@ -810,6 +814,17 @@ ${JSON.stringify(historySummary, null, 2)}
       setTimeout(() => {
         btn.innerHTML = '<i class="fas fa-copy"></i><span>کپی متن پرامپت</span>';
       }, 2000);
+    }
+
+    async function pasteClipboardToJsonInput() {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          document.getElementById('jsonInput').value = text;
+        }
+      } catch (e) {
+        document.getElementById('jsonInput').focus();
+      }
     }
 
     // ----------------------------------------------------

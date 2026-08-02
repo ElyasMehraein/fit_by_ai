@@ -239,7 +239,31 @@ fun WeeklyReviewDialog(
 
             // Import JSON Program Section with Auto Clipboard Banner
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("وارد کردن برنامه جدید (فرمت JSON)", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("وارد کردن برنامه جدید (فرمت JSON)", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+
+                    FilledTonalButton(
+                        onClick = {
+                            val clipText = composeClipboardManager.getText()?.text
+                            if (!clipText.isNullOrBlank()) {
+                                jsonInput = clipText
+                                Toast.makeText(context, "متن از حافظه چسبانده شد ✅", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "حافظه موقت (Clipboard) خالی است", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Icon(Icons.Default.ContentPaste, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("چسباندن", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                    }
+                }
 
                 if (detectedClipboardJson != null) {
                     Surface(
@@ -286,6 +310,17 @@ fun WeeklyReviewDialog(
                     value = jsonInput,
                     onValueChange = { jsonInput = it },
                     placeholder = { Text("کد پاسخ هوش مصنوعی را اینجا بچسبانید...", style = MaterialTheme.typography.bodySmall) },
+                    trailingIcon = {
+                        IconButton(onClick = {
+                            val clipText = composeClipboardManager.getText()?.text
+                            if (!clipText.isNullOrBlank()) {
+                                jsonInput = clipText
+                                Toast.makeText(context, "متن چسبانده شد ✅", Toast.LENGTH_SHORT).show()
+                            }
+                        }) {
+                            Icon(Icons.Default.ContentPaste, contentDescription = "چسباندن", tint = MaterialTheme.colorScheme.primary)
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(110.dp),

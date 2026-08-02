@@ -34,14 +34,6 @@ import com.fitbyai.app.ui.dialogs.HistoryDialog
 import com.fitbyai.app.ui.dialogs.ProfileDialog
 import com.fitbyai.app.ui.dialogs.WeeklyReviewDialog
 
-data class ExerciseGroup(
-    val exerciseId: String,
-    val title: String,
-    val description: String,
-    val images: List<String>,
-    val sets: List<WorkoutTaskEntity>
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
@@ -66,24 +58,6 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
                             text = "برنامه‌ریزی و مربی هوشمند تمرین",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                },
-                actions = {
-                    FilledTonalIconButton(
-                        onClick = {
-                            if (uiState.userProfile == null) {
-                                showProfileDialog = true
-                            } else {
-                                showReviewDialog = true
-                            }
-                        },
-                        modifier = Modifier.padding(end = 8.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.AutoAwesome,
-                            contentDescription = "بروزرسانی هوش مصنوعی",
-                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
                 },
@@ -152,24 +126,12 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
                 onTabSelected = { viewModel.setSelectedTab(it) }
             )
 
-            // Group tasks by exercise title / ID for zero clutter
-            val groupedExercises = remember(uiState.tasks) {
-                uiState.tasks.groupBy { it.title }.map { (title, sets) ->
-                    val first = sets.first()
-                    ExerciseGroup(
-                        exerciseId = first.exerciseId,
-                        title = title,
-                        description = first.description,
-                        images = first.images,
-                        sets = sets.sortedBy { it.setNumber }
-                    )
+            val displayTasks = remember(uiState.tasks, uiState.selectedTab) {
+                if (uiState.selectedTab == "queue") {
+                    uiState.tasks.filter { !it.completed }
+                } else {
+                    uiState.tasks.filter { it.completed }
                 }
-            }
-
-            val displayGroups = if (uiState.selectedTab == "queue") {
-                groupedExercises.filter { group -> group.sets.any { !it.completed } }
-            } else {
-                groupedExercises.filter { group -> group.sets.all { it.completed } }
             }
 
             if (uiState.tasks.isEmpty()) {
@@ -178,7 +140,7 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
                         if (uiState.userProfile == null) showProfileDialog = true else showReviewDialog = true
                     }
                 )
-            } else if (displayGroups.isEmpty()) {
+            } else if (displayTasks.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -195,10 +157,10 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    items(displayGroups, key = { it.title }) { group ->
-                        GroupedExerciseCard(
-                            group = group,
-                            onToggleSetStatus = { taskId, currentStatus ->
+                    items(displayTasks, key = { it.taskId }) { task ->
+                        SingleSetTaskCard(
+                            task = task,
+                            onToggleStatus = { taskId, currentStatus ->
                                 viewModel.toggleTaskCompletion(taskId, currentStatus)
                             }
                         )
@@ -547,20 +509,16 @@ fun SegmentedButtonOption(
 }
 
 @Composable
-fun GroupedExerciseCard(
-    group: ExerciseGroup,
-    onToggleSetStatus: (taskId: String, currentStatus: Boolean) -> Unit
+fun SingleSetTaskCard(
+    task: WorkoutTaskEntity,
+    onToggleStatus: (taskId: String, currentStatus: Boolean) -> Unit
 ) {
-    val completedCount = group.sets.count { it.completed }
-    val totalCount = group.sets.size
-    val allCompleted = completedCount == totalCount
-
     Card(
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (allCompleted) MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.surface
+            containerColor = if (task.completed) MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (allCompleted) 1.dp else 3.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (task.completed) 1.dp else 3.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column {
@@ -578,13 +536,13 @@ fun GroupedExerciseCard(
                         )
                     )
             ) {
-                if (group.images.isNotEmpty()) {
+                if (task.images.isNotEmpty()) {
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
-                            .data(group.images.first())
+                            .data(task.images.first())
                             .crossfade(true)
                             .build(),
-                        contentDescription = group.title,
+                        contentDescription = task.title,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -608,7 +566,7 @@ fun GroupedExerciseCard(
                     }
                 }
 
-                // Exercise Title & ID Badge
+                // Exercise Title & Set Badge
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -618,69 +576,78 @@ fun GroupedExerciseCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = group.title,
+                        text = task.title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = if (group.images.isNotEmpty()) Color.White else MaterialTheme.colorScheme.onSurface,
-                        textDecoration = if (allCompleted) TextDecoration.LineThrough else TextDecoration.None
+                        color = if (task.images.isNotEmpty()) Color.White else MaterialTheme.colorScheme.onSurface,
+                        textDecoration = if (task.completed) TextDecoration.LineThrough else TextDecoration.None
                     )
 
                     Surface(
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                        color = if (task.completed) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.primaryContainer,
                         shape = RoundedCornerShape(10.dp)
                     ) {
                         Text(
-                            text = "$completedCount / $totalCount ست",
+                            text = "ست ${task.setNumber} از ${task.totalSets}",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = if (allCompleted) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
+                            color = if (task.completed) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onPrimaryContainer,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                         )
                     }
                 }
             }
 
-            // Description and Set Chips Row
+            // Description and Action Button Row
             Column(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Text(
-                    text = group.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = 20.sp
-                )
-
-                // Interactive Set Chips
-                Text("ست‌های این حرکت:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
+                if (task.description.isNotBlank()) {
+                    Text(
+                        text = task.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        lineHeight = 20.sp
+                    )
+                }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    group.sets.forEach { setTask ->
-                        val isDone = setTask.completed
-                        FilterChip(
-                            selected = isDone,
-                            onClick = { onToggleSetStatus(setTask.taskId, setTask.completed) },
-                            label = {
-                                Text(
-                                    "ست ${setTask.setNumber} ${if (isDone) "✓" else ""}",
-                                    fontWeight = if (isDone) FontWeight.Bold else FontWeight.Medium
-                                )
-                            },
-                            leadingIcon = if (isDone) {
-                                { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                            } else null,
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                    if (!task.completed) {
+                        Button(
+                            onClick = { onToggleStatus(task.taskId, task.completed) },
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
                             ),
-                            shape = RoundedCornerShape(12.dp)
-                        )
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("انجام شد", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                        }
+                    } else {
+                        OutlinedButton(
+                            onClick = { onToggleStatus(task.taskId, task.completed) },
+                            shape = RoundedCornerShape(14.dp),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                        ) {
+                            Icon(Icons.Default.Undo, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("بازگردانی به صف", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Medium)
+                        }
                     }
+
+                    Text(
+                        text = task.exerciseId,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
                 }
             }
         }
