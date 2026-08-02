@@ -1,6 +1,7 @@
 package com.fitbyai.app.ui.screens
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -15,11 +16,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -30,8 +33,14 @@ import com.fitbyai.app.ui.WorkoutViewModel
 import com.fitbyai.app.ui.dialogs.HistoryDialog
 import com.fitbyai.app.ui.dialogs.ProfileDialog
 import com.fitbyai.app.ui.dialogs.WeeklyReviewDialog
-import java.text.SimpleDateFormat
-import java.util.*
+
+data class ExerciseGroup(
+    val exerciseId: String,
+    val title: String,
+    val description: String,
+    val images: List<String>,
+    val sets: List<WorkoutTaskEntity>
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,50 +53,79 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = {
-                    Text(
-                        text = "Fit by AI",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "Fit by AI",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "برنامه‌ریزی و مربی هوشمند تمرین",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 },
                 actions = {
-                    IconButton(onClick = { showHistoryDialog = true }) {
-                        Icon(Icons.Default.History, contentDescription = "تاریخچه", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    FilledTonalIconButton(
+                        onClick = {
+                            if (uiState.userProfile == null) {
+                                showProfileDialog = true
+                            } else {
+                                showReviewDialog = true
+                            }
+                        },
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.AutoAwesome,
+                            contentDescription = "بروزرسانی هوش مصنوعی",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
-                    IconButton(onClick = {
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            )
+        },
+        bottomBar = {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surface,
+                tonalElevation = 6.dp
+            ) {
+                NavigationBarItem(
+                    selected = uiState.selectedTab == "queue" || uiState.selectedTab == "done",
+                    onClick = { viewModel.setSelectedTab("queue") },
+                    icon = { Icon(Icons.Default.FitnessCenter, contentDescription = null) },
+                    label = { Text("تمرینات", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold) }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = {
                         if (uiState.userProfile == null) {
                             showProfileDialog = true
                         } else {
                             showReviewDialog = true
                         }
-                    }) {
-                        Icon(Icons.Default.AutoAwesome, contentDescription = "بروزرسانی", tint = MaterialTheme.colorScheme.primary)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
-            )
-        },
-        bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp) {
-                NavigationBarItem(
-                    selected = uiState.selectedTab == "queue",
-                    onClick = { viewModel.setSelectedTab("queue") },
-                    icon = { Icon(Icons.Default.FitnessCenter, contentDescription = null) },
-                    label = { Text("تمرینات", style = MaterialTheme.typography.labelMedium) }
+                    },
+                    icon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
+                    label = { Text("دستیار AI", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold) }
                 )
                 NavigationBarItem(
                     selected = false,
                     onClick = { showHistoryDialog = true },
                     icon = { Icon(Icons.Default.ShowChart, contentDescription = null) },
-                    label = { Text("تاریخچه", style = MaterialTheme.typography.labelMedium) }
+                    label = { Text("تاریخچه", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold) }
                 )
                 NavigationBarItem(
                     selected = false,
                     onClick = { showProfileDialog = true },
                     icon = { Icon(Icons.Default.Person, contentDescription = null) },
-                    label = { Text("پروفایل", style = MaterialTheme.typography.labelMedium) }
+                    label = { Text("پروفایل", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold) }
                 )
             }
         }
@@ -98,108 +136,79 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
                 .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            // Deadline Countdown Banner
-            DeadlineBanner(uiState.deadlineTimestamp, uiState.tasks)
+            // Hero Progress Dashboard
+            HeroProgressCard(
+                uiState = uiState,
+                onOpenWeeklyReview = {
+                    if (uiState.userProfile == null) showProfileDialog = true else showReviewDialog = true
+                }
+            )
 
-            // Progress Bar Card
-            val doneCount = uiState.tasks.count { it.completed }
-            val totalCount = uiState.tasks.size
-            val progressPercent = if (totalCount > 0) ((doneCount.toDouble() / totalCount) * 100).toInt() else 0
+            // Segmented Tab Controls
+            M3SegmentedTabRow(
+                selectedTab = uiState.selectedTab,
+                queueCount = uiState.tasks.count { !it.completed },
+                doneCount = uiState.tasks.count { it.completed },
+                onTabSelected = { viewModel.setSelectedTab(it) }
+            )
 
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("پیشرفت", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("$progressPercent٪", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                    }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    LinearProgressIndicator(
-                        progress = { if (totalCount > 0) doneCount.toFloat() / totalCount else 0f },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                            .clip(CircleShape),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.outlineVariant
+            // Group tasks by exercise title / ID for zero clutter
+            val groupedExercises = remember(uiState.tasks) {
+                uiState.tasks.groupBy { it.title }.map { (title, sets) ->
+                    val first = sets.first()
+                    ExerciseGroup(
+                        exerciseId = first.exerciseId,
+                        title = title,
+                        description = first.description,
+                        images = first.images,
+                        sets = sets.sortedBy { it.setNumber }
                     )
                 }
             }
 
-            // Tab Buttons
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp)
-                    .background(MaterialTheme.colorScheme.surface)
-            ) {
-                TabButton(
-                    title = "در صف انجام (${uiState.tasks.count { !it.completed }})",
-                    selected = uiState.selectedTab == "queue",
-                    modifier = Modifier.weight(1f)
-                ) {
-                    viewModel.setSelectedTab("queue")
-                }
-                TabButton(
-                    title = "انجام شده (${uiState.tasks.count { it.completed }})",
-                    selected = uiState.selectedTab == "done",
-                    modifier = Modifier.weight(1f)
-                ) {
-                    viewModel.setSelectedTab("done")
-                }
-            }
-
-            // Task List
-            val displayList = if (uiState.selectedTab == "queue") {
-                uiState.tasks.filter { !it.completed }
+            val displayGroups = if (uiState.selectedTab == "queue") {
+                groupedExercises.filter { group -> group.sets.any { !it.completed } }
             } else {
-                uiState.tasks.filter { it.completed }
+                groupedExercises.filter { group -> group.sets.all { it.completed } }
             }
 
             if (uiState.tasks.isEmpty()) {
+                EmptyStateCard(
+                    onGetStarted = {
+                        if (uiState.userProfile == null) showProfileDialog = true else showReviewDialog = true
+                    }
+                )
+            } else if (displayGroups.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
-                        Icon(Icons.Default.FitnessCenter, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("برنامه‌ای تعریف نشده است", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                        Text("اطلاعات خود را وارد کنید تا برنامه شخصی‌سازی شده دریافت کنید", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Button(
-                            onClick = { if (uiState.userProfile == null) showProfileDialog = true else showReviewDialog = true },
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text("دریافت برنامه جدید")
-                        }
-                    }
+                    Text(
+                        text = if (uiState.selectedTab == "queue") "هیچ تمرینی در صف انجام نیست! 🎉" else "هنوز تمرینی را به‌طور کامل به پایان نرسانده‌اید.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(20.dp),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    items(displayList, key = { it.taskId }) { task ->
-                        TaskCard(task = task, onToggleStatus = {
-                            viewModel.toggleTaskCompletion(task.taskId, task.completed)
-                        })
+                    items(displayGroups, key = { it.title }) { group ->
+                        GroupedExerciseCard(
+                            group = group,
+                            onToggleSetStatus = { taskId, currentStatus ->
+                                viewModel.toggleTaskCompletion(taskId, currentStatus)
+                            }
+                        )
                     }
                 }
             }
         }
     }
 
-    // Dialogs
+    // Modal Bottom Sheets
     if (showProfileDialog) {
         ProfileDialog(
             currentProfile = uiState.userProfile,
@@ -213,7 +222,7 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
     if (showReviewDialog) {
         val lastWeight = uiState.history.lastOrNull()?.weight?.toString() ?: uiState.userProfile?.baseWeight ?: ""
         val lastWaist = uiState.history.lastOrNull()?.waist?.toString() ?: uiState.userProfile?.baseWaist ?: ""
-        
+
         WeeklyReviewDialog(
             generatedPrompt = uiState.generatedPrompt,
             errorMessage = uiState.errorMessage,
@@ -249,129 +258,493 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
 }
 
 @Composable
-fun TaskCard(task: WorkoutTaskEntity, onToggleStatus: () -> Unit) {
-    Card(
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column {
-            // Exercise Image
-            if (task.images.isNotEmpty()) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(task.images.first())
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = task.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(180.dp)
-                )
-            }
+fun HeroProgressCard(uiState: WorkoutUiState, onOpenWeeklyReview: () -> Unit) {
+    val doneCount = uiState.tasks.count { it.completed }
+    val totalCount = uiState.tasks.size
+    val progressFraction = if (totalCount > 0) doneCount.toFloat() / totalCount else 0f
+    val progressPercent = (progressFraction * 100).toInt()
+    val allCompleted = totalCount > 0 && doneCount == totalCount
+    val currentWeekNumber = uiState.history.size + 1
 
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(
+        modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // End of Week Celebration Hero Banner
+        if (allCompleted) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                tonalElevation = 6.dp
+            ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Text(task.title, style = MaterialTheme.typography.titleMedium)
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer
+                        color = MaterialTheme.colorScheme.secondary,
+                        shape = CircleShape
                     ) {
-                        Text(
-                            text = "ست ${task.setNumber} از ${task.totalSets}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                        Icon(
+                            Icons.Default.EmojiEvents,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSecondary,
+                            modifier = Modifier.padding(14.dp).size(32.dp)
                         )
                     }
+
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            "هفته $currentWeekNumber با موفقیت تکمیل شد! 🏆",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        Text(
+                            "شاخص‌های این هفته را ثبت کنید تا هوش مصنوعی برنامه جدید را بسازد.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Button(
+                            onClick = onOpenWeeklyReview,
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            ),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                        ) {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("دریافت برنامه هفته جدید 🚀", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
+            }
+        }
 
-                Text(task.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 18.sp)
-
+        // Active Week Hero Card
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.primaryContainer,
+            tonalElevation = 4.dp
+        ) {
+            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Button(
-                        onClick = onToggleStatus,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (task.completed) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary
-                        ),
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text(
+                                "هفته $currentWeekNumber",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
+                        DeadlineChip(uiState.deadlineTimestamp, uiState.tasks)
+                    }
+
+                    Surface(
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = if (task.completed) "↺ بازگردانی" else "✓ انجام شد",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = if (task.completed) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onPrimary
+                            text = "$doneCount از $totalCount ست",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                         )
                     }
-                    Text(task.exerciseId, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.outline)
                 }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Column {
+                        Text(
+                            text = "پیشرفت تمرینات هفته",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "$progressPercent٪",
+                            style = MaterialTheme.typography.displayMedium,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+
+                    Surface(
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = CircleShape
+                    ) {
+                        Icon(
+                            Icons.Default.SportsGymnastics,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier
+                                .padding(12.dp)
+                                .size(28.dp)
+                        )
+                    }
+                }
+
+                val animatedProgress by animateFloatAsState(
+                    targetValue = progressFraction,
+                    animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
+                    label = "ProgressAnimation"
+                )
+
+                LinearProgressIndicator(
+                    progress = { animatedProgress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(10.dp)
+                        .clip(CircleShape),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.15f)
+                )
             }
         }
     }
 }
 
 @Composable
-fun TabButton(title: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Box(
-        modifier = modifier
-            .clickable(onClick = onClick)
-            .padding(vertical = 14.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+fun DeadlineChip(deadlineTimestamp: Long?, tasks: List<WorkoutTaskEntity>) {
+    if (deadlineTimestamp == null) {
+        Surface(
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            shape = RoundedCornerShape(12.dp)
+        ) {
             Text(
-                text = title,
-                style = MaterialTheme.typography.labelLarge,
-                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                "برنامه هفته فعال",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                fontWeight = FontWeight.Bold
             )
-            if (selected) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Box(modifier = Modifier.size(24.dp, 2.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
-            }
         }
+        return
     }
-}
-
-@Composable
-fun DeadlineBanner(deadlineTimestamp: Long?, tasks: List<WorkoutTaskEntity>) {
-    if (deadlineTimestamp == null) return
 
     val remaining = deadlineTimestamp - System.currentTimeMillis()
     val allCompleted = tasks.isNotEmpty() && tasks.all { it.completed }
 
-    val (bgColor, textColor, message) = when {
-        allCompleted -> Triple(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.primary, "تمام تمرینات این هفته انجام شد")
+    val (bgColor, textColor, text) = when {
+        allCompleted -> Triple(
+            MaterialTheme.colorScheme.secondaryContainer,
+            MaterialTheme.colorScheme.onSecondaryContainer,
+            "تمرینات تکمیل شد! 🎉"
+        )
         remaining > 0 -> {
             val hours = (remaining / (1000 * 60 * 60))
             val days = hours / 24
-            Triple(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant, "$days روز و ${hours % 24} ساعت تا پایان هفته")
+            Triple(
+                MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+                MaterialTheme.colorScheme.onSurface,
+                "$days روز و ${hours % 24} ساعت مابقی"
+            )
         }
-        else -> Triple(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f), MaterialTheme.colorScheme.error, "زمان این هفته به پایان رسیده است")
+        else -> Triple(
+            MaterialTheme.colorScheme.errorContainer,
+            MaterialTheme.colorScheme.onErrorContainer,
+            "پایان مهلت هفته"
+        )
     }
 
+    Surface(color = bgColor, shape = RoundedCornerShape(12.dp)) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(Icons.Default.HourglassEmpty, contentDescription = null, tint = textColor, modifier = Modifier.size(14.dp))
+            Text(text, style = MaterialTheme.typography.labelSmall, color = textColor, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+fun M3SegmentedTabRow(
+    selectedTab: String,
+    queueCount: Int,
+    doneCount: Int,
+    onTabSelected: (String) -> Unit
+) {
     Surface(
-        color = bgColor,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(20.dp, 10.dp),
-        shape = RoundedCornerShape(16.dp)
+            .padding(horizontal = 20.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Icon(Icons.Default.HourglassEmpty, contentDescription = null, tint = textColor, modifier = Modifier.size(18.dp))
-            Text(message, style = MaterialTheme.typography.labelMedium, color = textColor)
+            SegmentedButtonOption(
+                title = "در صف انجام ($queueCount)",
+                selected = selectedTab == "queue",
+                modifier = Modifier.weight(1f)
+            ) {
+                onTabSelected("queue")
+            }
+
+            SegmentedButtonOption(
+                title = "تکمیل شده ($doneCount)",
+                selected = selectedTab == "done",
+                modifier = Modifier.weight(1f)
+            ) {
+                onTabSelected("done")
+            }
+        }
+    }
+}
+
+@Composable
+fun SegmentedButtonOption(
+    title: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val backgroundColor = if (selected) MaterialTheme.colorScheme.surface else Color.Transparent
+    val contentColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+
+    Surface(
+        onClick = onClick,
+        modifier = modifier.height(44.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = backgroundColor,
+        tonalElevation = if (selected) 2.dp else 0.dp
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                color = contentColor
+            )
+        }
+    }
+}
+
+@Composable
+fun GroupedExerciseCard(
+    group: ExerciseGroup,
+    onToggleSetStatus: (taskId: String, currentStatus: Boolean) -> Unit
+) {
+    val completedCount = group.sets.count { it.completed }
+    val totalCount = group.sets.size
+    val allCompleted = completedCount == totalCount
+
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (allCompleted) MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (allCompleted) 1.dp else 3.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column {
+            // Exercise Header Image & Title
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                MaterialTheme.colorScheme.surfaceContainerHigh
+                            )
+                        )
+                    )
+            ) {
+                if (group.images.isNotEmpty()) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(group.images.first())
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = group.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.65f))
+                                )
+                            )
+                    )
+                } else {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.FitnessCenter,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                            modifier = Modifier.size(60.dp)
+                        )
+                    }
+                }
+
+                // Exercise Title & ID Badge
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomStart)
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = group.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (group.images.isNotEmpty()) Color.White else MaterialTheme.colorScheme.onSurface,
+                        textDecoration = if (allCompleted) TextDecoration.LineThrough else TextDecoration.None
+                    )
+
+                    Surface(
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text(
+                            text = "$completedCount / $totalCount ست",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (allCompleted) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+            }
+
+            // Description and Set Chips Row
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Text(
+                    text = group.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 20.sp
+                )
+
+                // Interactive Set Chips
+                Text("ست‌های این حرکت:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    group.sets.forEach { setTask ->
+                        val isDone = setTask.completed
+                        FilterChip(
+                            selected = isDone,
+                            onClick = { onToggleSetStatus(setTask.taskId, setTask.completed) },
+                            label = {
+                                Text(
+                                    "ست ${setTask.setNumber} ${if (isDone) "✓" else ""}",
+                                    fontWeight = if (isDone) FontWeight.Bold else FontWeight.Medium
+                                )
+                            },
+                            leadingIcon = if (isDone) {
+                                { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                            } else null,
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun EmptyStateCard(onGetStarted: () -> Unit) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(32.dp),
+            shape = RoundedCornerShape(32.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f)
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.padding(32.dp)
+            ) {
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = CircleShape
+                ) {
+                    Icon(
+                        Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .padding(20.dp)
+                            .size(48.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Text(
+                    text = "هنوز برنامه‌ای تنظیم نشده است",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center
+                )
+
+                Text(
+                    text = "مشخصات بدنی خود را وارد کنید تا هوش مصنوعی یک برنامه تمرینی کاملاً اختصاصی برای شما تولید کند.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 20.sp
+                )
+
+                Button(
+                    onClick = onGetStarted,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.height(50.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("دریافت اولین برنامه شخصی", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                }
+            }
         }
     }
 }
