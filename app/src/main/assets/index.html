@@ -1104,10 +1104,11 @@ ${JSON.stringify(historySummary, null, 2)}
 
       const imagesMarkup = task.images.length
         ? `
-          <div class="relative aspect-video w-full overflow-hidden bg-slate-900">
+          <div class="relative aspect-video w-full overflow-hidden bg-slate-900" dir="rtl">
             <div
               id="carousel-${task.taskId}"
               class="hide-scrollbar flex h-full w-full snap-x snap-mandatory overflow-x-auto scroll-smooth"
+              dir="rtl"
               onscroll="updateIndicator('${task.taskId}')"
             >
               ${task.images.map((image, index) => `
@@ -1173,23 +1174,27 @@ ${JSON.stringify(historySummary, null, 2)}
 
           <div class="flex flex-col gap-2.5 p-4">
             <div>
-              <div class="flex items-center justify-between">
+              <div class="flex items-center justify-between gap-2">
                 <h3 class="text-sm font-black leading-6 text-white">
                   ${title}
                 </h3>
-                <div class="flex items-center gap-1.5">
-                  ${
-                    task.targetPerSet
-                      ? `<span class="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
-                          ${escapeHtml(task.targetPerSet)}
-                         </span>`
-                      : ""
-                  }
-                  <span class="rounded-md border border-slate-800 bg-slate-900 px-2 py-0.5 font-mono text-[10px] text-emerald-400 font-bold">
-                    ست ${formatNumber(task.setNumber)} از ${formatNumber(task.totalSets)}
-                  </span>
-                </div>
+                <span class="shrink-0 rounded-md border border-slate-800 bg-slate-900 px-2 py-0.5 font-mono text-[10px] text-emerald-400 font-bold">
+                  ست ${formatNumber(task.setNumber)} از ${formatNumber(task.totalSets)}
+                </span>
               </div>
+
+              ${
+                task.targetPerSet
+                  ? `
+                    <div class="mt-2 flex items-center gap-1.5 text-[11px] font-bold text-emerald-400">
+                      <span class="inline-flex items-center gap-1 rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1">
+                        <i class="fas fa-bullseye text-[10px] text-emerald-400"></i>
+                        <span>هدف هر ست: ${escapeHtml(task.targetPerSet)}</span>
+                      </span>
+                    </div>
+                  `
+                  : ""
+              }
             </div>
 
             <p class="text-justify text-xs leading-6 text-slate-400 font-normal">
@@ -1209,7 +1214,7 @@ ${JSON.stringify(historySummary, null, 2)}
       const carousel = document.getElementById(`carousel-${taskId}`);
       if (!carousel || carousel.offsetWidth === 0) return;
 
-      const activeIndex = Math.round(carousel.scrollLeft / carousel.offsetWidth);
+      const activeIndex = Math.abs(Math.round(carousel.scrollLeft / carousel.offsetWidth));
       const task = weeklySetTasks.find(item => item.taskId === taskId);
       if (!task) return;
 
