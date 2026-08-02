@@ -13,6 +13,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.window.Dialog
 import com.fitbyai.app.data.UserProfileEntity
 
@@ -40,17 +44,18 @@ fun ProfileDialog(
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(28.dp),
             color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(8.dp)
+                .padding(16.dp)
         ) {
             Column(
                 modifier = Modifier
-                    .padding(20.dp)
+                    .padding(24.dp)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -58,54 +63,56 @@ fun ProfileDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "پروفایل اولیه کاربر",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Black,
+                        text = "پروفایل ورزشی",
+                        style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     IconButton(onClick = onDismiss) {
-                        Text("✕", fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(Icons.Default.Close, contentDescription = "بستن")
                     }
                 }
 
                 Text(
-                    text = "این اطلاعات جهت شخصی‌سازی پرامپت‌ها و برنامه‌های هوش مصنوعی ذخیره می‌شوند.",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = 18.sp
+                    text = "این اطلاعات جهت شخصی‌سازی برنامه‌های هوش مصنوعی استفاده می‌شوند.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = height,
                         onValueChange = { height = it },
                         label = { Text("قد (cm)") },
                         modifier = Modifier.weight(1f),
-                        singleLine = true
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                     OutlinedTextField(
                         value = age,
                         onValueChange = { age = it },
                         label = { Text("سن") },
                         modifier = Modifier.weight(1f),
-                        singleLine = true
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = baseWeight,
                         onValueChange = { baseWeight = it },
-                        label = { Text("وزن اولیه (kg)") },
+                        label = { Text("وزن (kg)") },
                         modifier = Modifier.weight(1f),
-                        singleLine = true
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                     OutlinedTextField(
                         value = baseWaist,
                         onValueChange = { baseWaist = it },
-                        label = { Text("دور کمر اولیه (cm)") },
+                        label = { Text("دور کمر (cm)") },
                         modifier = Modifier.weight(1f),
-                        singleLine = true
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                 }
 
@@ -157,10 +164,11 @@ fun ProfileDialog(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
+                        .height(56.dp)
                         .padding(top = 8.dp),
-                    shape = RoundedCornerShape(14.dp)
+                    shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text("ذخیره اطلاعات پروفایل", fontWeight = FontWeight.Bold)
+                    Text("ذخیره اطلاعات پروفایل", style = MaterialTheme.typography.titleMedium)
                 }
             }
         }

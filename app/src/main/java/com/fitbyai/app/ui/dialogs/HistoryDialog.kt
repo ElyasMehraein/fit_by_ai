@@ -14,6 +14,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.fitbyai.app.data.WeeklyHistoryEntity
 
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+
 @Composable
 fun HistoryDialog(
     historyList: List<WeeklyHistoryEntity>,
@@ -22,16 +26,17 @@ fun HistoryDialog(
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(28.dp),
             color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(4.dp)
+                .padding(12.dp)
         ) {
             Column(
                 modifier = Modifier
-                    .padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -39,84 +44,84 @@ fun HistoryDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "تاریخچه پیشرفت و هفته‌ها",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Black,
+                        text = "تاریخچه پیشرفت",
+                        style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     IconButton(onClick = onDismiss) {
-                        Text("✕", fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(Icons.Default.Close, contentDescription = "بستن")
                     }
                 }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Card(
                         modifier = Modifier.weight(1f),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background)
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                     ) {
                         Column(
-                            modifier = Modifier.padding(10.dp),
+                            modifier = Modifier.padding(12.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text("هفته‌های ثبت‌شده", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(historyList.size.toString(), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            Text("هفته‌ها", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(historyList.size.toString(), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                         }
                     }
                     Card(
                         modifier = Modifier.weight(1f),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background)
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                     ) {
                         Column(
-                            modifier = Modifier.padding(10.dp),
+                            modifier = Modifier.padding(12.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text("آخرین وزن", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("آخرین وزن", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             val lastW = if (historyList.isNotEmpty()) "${historyList.last().weight} kg" else "-"
-                            Text(lastW, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            Text(lastW, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
 
                 if (historyList.isEmpty()) {
                     Text(
-                        text = "هنوز تاریخچه‌ای ثبت نشده است. پس از پایان اولین هفته، گزارش‌ها اینجا ذخیره می‌شوند.",
-                        fontSize = 12.sp,
+                        text = "هنوز تاریخچه‌ای ثبت نشده است.",
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(vertical = 24.dp)
+                        modifier = Modifier.padding(vertical = 32.dp),
+                        textAlign = TextAlign.Center
                     )
                 } else {
                     LazyColumn(
-                        modifier = Modifier.height(280.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier.heightIn(max = 350.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(historyList) { item ->
                             Card(
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                             ) {
                                 Column(
-                                    modifier = Modifier.padding(12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Text("هفته ${item.week}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontSize = 13.sp)
-                                        Text(item.date, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text("هفته ${item.week}", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                                        Text(item.date, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Text("وزن: ${item.weight} kg", fontSize = 11.sp)
-                                        Text("دور کمر: ${item.waist} cm", fontSize = 11.sp)
-                                        Text("تکمیل: ${item.completionRate}%", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
+                                        Text("وزن: ${item.weight}", style = MaterialTheme.typography.bodySmall)
+                                        Text("کمر: ${item.waist}", style = MaterialTheme.typography.bodySmall)
+                                        Text("${item.completionRate}%", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                                     }
-                                    Text("بازخورد: ${item.feedback}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 16.sp)
                                 }
                             }
                         }
@@ -127,7 +132,7 @@ fun HistoryDialog(
                     onClick = onResetData,
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 ) {
-                    Text("ریست تمام داده‌های برنامه", color = MaterialTheme.colorScheme.error, fontSize = 11.sp)
+                    Text("ریست تمام داده‌ها", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
                 }
             }
         }
