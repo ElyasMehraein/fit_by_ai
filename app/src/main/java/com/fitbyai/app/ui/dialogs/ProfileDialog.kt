@@ -244,7 +244,7 @@ fun ProfileDialog(
                         SelectAllOutlinedTextField(
                             value = baseWaist,
                             onValueChange = { baseWaist = it },
-                            label = { Text("دور کمر (cm)") },
+                            label = { Text("دور شکم (cm)") },
                             leadingIcon = { Icon(Icons.Default.Straighten, contentDescription = null) },
                             modifier = Modifier.weight(1f),
                             singleLine = true,
@@ -473,7 +473,7 @@ fun ProfileDialog(
                                     Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                                     Text(
-                                        text = "قد: ${item.height.ifEmpty { "-" }} سانتی‌متر | سن: ${item.age.ifEmpty { "-" }} | وزن: ${item.baseWeight.ifEmpty { "-" }} کیلوگرم | دور کمر: ${item.baseWaist.ifEmpty { "-" }} سانتی‌متر",
+                                        text = "قد: ${item.height.ifEmpty { "-" }} سانتی‌متر | سن: ${item.age.ifEmpty { "-" }} | وزن: ${item.baseWeight.ifEmpty { "-" }} کیلوگرم | دور شکم: ${item.baseWaist.ifEmpty { "-" }} سانتی‌متر",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )

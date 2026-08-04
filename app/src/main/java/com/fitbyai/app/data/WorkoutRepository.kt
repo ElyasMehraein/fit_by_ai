@@ -72,9 +72,43 @@ class WorkoutRepository(private val dao: WorkoutDao) {
         jointPain: String = "بدون درد مفصلی"
     ): String {
         val profile = dao.getUserProfile()
+        val currentTasks = dao.getTasks()
+
+        // Log/snapshot current workout progress into history database if tasks exist
+        if (currentTasks.isNotEmpty()) {
+            val doneCount = currentTasks.count { it.completed }
+            val totalCount = currentTasks.size
+            val existingHistory = dao.getHistory()
+            val exerciseSummaryStr = currentTasks.groupBy { if (it.exerciseId.isNotBlank()) it.exerciseId else it.title }
+                .map { (_, tasks) ->
+                    val first = tasks.first()
+                    val done = tasks.count { it.completed }
+                    "${first.title} (${tasks.size} ست - $done انجام شد)"
+                }.joinToString("، ")
+
+            val historyRecord = WeeklyHistoryEntity(
+                week = existingHistory.size + 1,
+                date = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date()),
+                weight = weight.toDoubleOrNull() ?: profile?.baseWeight?.toDoubleOrNull() ?: 0.0,
+                waist = waist.toDoubleOrNull() ?: profile?.baseWaist?.toDoubleOrNull() ?: 0.0,
+                sleep = sleep,
+                energy = energy,
+                rpe = rpe,
+                pain = pain.ifEmpty { "بدون درد" },
+                completedSets = doneCount,
+                totalSets = totalCount,
+                completionRate = if (totalCount > 0) ((doneCount.toDouble() / totalCount) * 100).toInt() else 100,
+                feedback = feedback.ifEmpty { "تمرینات هفته انجام شد" },
+                exerciseCount = currentTasks.groupBy { if (it.exerciseId.isNotBlank()) it.exerciseId else it.title }.size,
+                exerciseSummary = exerciseSummaryStr,
+                muscleSoreness = muscleSoreness,
+                jointPain = jointPain
+            )
+            dao.insertHistory(historyRecord)
+        }
+
         val historyList = dao.getHistory()
         val weekNumber = historyList.size + 1
-        val currentTasks = dao.getTasks()
 
         // 1. Details of the recent/current workout program and completed sets
         val currentWeekWorkoutText = if (currentTasks.isNotEmpty()) {
@@ -109,7 +143,7 @@ class WorkoutRepository(private val dao: WorkoutDao) {
                 val jointText = if (h.jointPain.isNotBlank()) " | درد مفصلی: ${h.jointPain}" else ""
                 """
                 - هفته ${h.week} (تاریخ: ${h.date}):
-                  • وزن: ${h.weight} کیلوگرم | دور کمر: ${h.waist} سانتی‌متر
+                  • وزن: ${h.weight} کیلوگرم | دور شکم: ${h.waist} سانتی‌متر
                   • ریکاوری: خواب: ${h.sleep} | انرژی: ${h.energy}/10 | سختی RPE: ${h.rpe}/10 | وضعیت درد: ${h.pain}$soreText$jointText
                   • ست‌های تکمیل‌شده: ${h.completedSets} از ${h.totalSets} ست (${h.completionRate}%)
                   • بازخورد کاربر: ${h.feedback.ifEmpty { "ثبت نشده" }}$exText
@@ -131,7 +165,7 @@ class WorkoutRepository(private val dao: WorkoutDao) {
 
 - هفته کاری فعلی: $weekNumber
 - وزن جدید: $weight کیلوگرم
-- دور کمر جدید: $waist سانتی‌متر
+- دور شکم جدید: $waist سانتی‌متر
 - میانگین خواب شبانه‌روز: $sleep
 - سطح انرژی بدنی (1 تا 10): $energy
 - میزان سختی تمرین / RPE (1 تا 10): $rpe
@@ -147,7 +181,7 @@ $currentWeekWorkoutText
 
 شناسنامه اولیه و کامل من:
 - قد: ${profile?.height ?: "-"} cm | سن: ${profile?.age ?: "-"} | جنسیت: ${profile?.gender ?: "-"}
-- وزن پایه: ${profile?.baseWeight ?: "-"} kg | دور کمر پایه: ${profile?.baseWaist ?: "-"} cm | وزن هدف: ${profile?.targetWeight?.ifEmpty { "-" } ?: "-"} kg
+- وزن پایه: ${profile?.baseWeight ?: "-"} kg | دور شکم پایه: ${profile?.baseWaist ?: "-"} cm | وزن هدف: ${profile?.targetWeight?.ifEmpty { "-" } ?: "-"} kg
 - هدف اصلی: ${profile?.goal ?: "-"}
 - سابقه تمرینی: ${profile?.experience?.let { if (it.isNotBlank() && it.all { c -> c.isDigit() }) "$it سال" else it } ?: "-"}
 - روزهای تمرین در هفته: ${profile?.daysPerWeek?.let { if (it.isNotBlank() && it.all { c -> c.isDigit() }) "$it روز در هفته" else it } ?: "-"}
@@ -164,7 +198,7 @@ $pastWeeksHistoryText
 
 دستورالعمل‌های علمی جهت طراحی برنامه جدید:
 ۱. در ابتدا از من بخواه یک عکس جدید از هیکلم با لباس مناسب، نور خوب و بدون فیلتر برات بفرستم.
-۲. پس از دریافت عکس، روند تغییرات ظاهری، وزن، دور کمر، خواب، انرژی و بازخوردهای من را دقیقاً مقایسه کن.
+۲. پس از دریافت عکس، روند تغییرات ظاهری، وزن، دور شکم، خواب، انرژی و بازخوردهای من را دقیقاً مقایسه کن.
 ۳. بر اساس اصل اضافه بار تدریجی (Progressive Overload)، شدت (RPE)، تعداد ست‌ها یا حجم تمرین را تنظیم کرده یا در صورت خستگی شدید/درد مفصلی هفته دِلود (Deload) تجویز کن.
 ۴. **الگوهای حرکتی پایه (Movement Patterns)**: حتماً تعادل بین الگوهای حرکتی اصلی (Push, Pull, Squat, Hinge, Lunge, Carry, Core) و تعادل عضلات آگونیست و آنتاگونیست (مثلاً سینه و پشت، چهارسر و همسترینگ) را رعایت کن.
 ۵. **تکرار در ذخیره (RIR)**: در کلید targetPerSet علاوه بر تعداد تکرار، حتماً مقدار RIR مناسب (مثلاً RIR 1 تا 3) را ذکر کن (مثلاً: «۱۰ الی ۱۲ تکرار (RIR 2)»).

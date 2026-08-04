@@ -88,7 +88,7 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
     ) {
         viewModelScope.launch {
             if (weight.isBlank() || waist.isBlank()) {
-                _uiState.update { it.copy(errorMessage = "لطفاً فیلدهای وزن و دور کمر را پر کنید.") }
+                _uiState.update { it.copy(errorMessage = "لطفاً فیلدهای وزن و دور شکم را پر کنید.") }
                 return@launch
             }
             _uiState.update { it.copy(errorMessage = null) }

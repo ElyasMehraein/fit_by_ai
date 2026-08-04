@@ -189,7 +189,7 @@ fun HistoryDialog(
                                         }
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                            Text("کمر: ${item.waist} cm", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            Text("شکم: ${item.waist} cm", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                             if (waistDelta != null && waistDelta != 0.0) {
                                                 val waistText = if (waistDelta > 0) "+${String.format("%.1f", waistDelta)}" else String.format("%.1f", waistDelta)
                                                 Text("($waistText)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)

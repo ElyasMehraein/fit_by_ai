@@ -134,18 +134,7 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
                 .background(MaterialTheme.colorScheme.background)
         ) {
             if (uiState.tasks.isNotEmpty()) {
-                // Hero Progress Dashboard
-                HeroProgressCard(
-                    uiState = uiState,
-                    onOpenWeeklyReview = {
-                        if (uiState.userProfile == null) showProfileDialog = true else showReviewDialog = true
-                    }
-                )
-
-                // Weekly Muscle Volume Distribution Dashboard
-                MuscleVolumeDashboardCard(tasks = uiState.tasks)
-
-                // Segmented Tab Controls
+                // Segmented Tab Controls pinned at top for fast navigation
                 M3SegmentedTabRow(
                     selectedTab = uiState.selectedTab,
                     queueCount = uiState.tasks.count { !it.completed },
@@ -177,24 +166,41 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
                         onGetStarted = { showReviewDialog = true }
                     )
                 }
-            } else if ((isQueueTab && queuedGroups.isEmpty()) || (!isQueueTab && doneTasks.isEmpty())) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (isQueueTab) "هیچ تمرینی در صف انجام نیست! 🎉" else "هنوز تمرینی را به‌طور کامل به پایان نرسانده‌اید.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    if (isQueueTab) {
+                    item(key = "hero_progress") {
+                        HeroProgressCard(
+                            uiState = uiState,
+                            onOpenWeeklyReview = {
+                                if (uiState.userProfile == null) showProfileDialog = true else showReviewDialog = true
+                            }
+                        )
+                    }
+
+                    item(key = "muscle_volume") {
+                        MuscleVolumeDashboardCard(tasks = uiState.tasks)
+                    }
+
+                    if ((isQueueTab && queuedGroups.isEmpty()) || (!isQueueTab && doneTasks.isEmpty())) {
+                        item(key = "empty_tab_notice") {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (isQueueTab) "هیچ تمرینی در صف انجام نیست! 🎉" else "هنوز تمرینی را به‌طور کامل به پایان نرسانده‌اید.",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    } else if (isQueueTab) {
                         items(queuedGroups, key = { it.key }) { group ->
                             if (group.tasks.size == 1) {
                                 SingleSetTaskCard(
@@ -299,7 +305,9 @@ fun HeroProgressCard(uiState: WorkoutUiState, onOpenWeeklyReview: () -> Unit) {
     val isTimeRemaining = uiState.deadlineTimestamp != null && remainingMs > 0
 
     Column(
-        modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // End of Week Celebration Hero Banner
@@ -1127,7 +1135,7 @@ fun MuscleVolumeDashboardCard(tasks: List<WorkoutTaskEntity>) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 4.dp),
+            .padding(vertical = 4.dp),
         shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.4f),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
