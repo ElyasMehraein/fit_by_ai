@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -148,13 +149,18 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
                 onTabSelected = { viewModel.setSelectedTab(it) }
             )
 
-            val displayTasks = remember(uiState.tasks, uiState.selectedTab) {
-                if (uiState.selectedTab == "queue") {
-                    uiState.tasks.filter { !it.completed }
-                } else {
-                    uiState.tasks.filter { it.completed }
-                }
+            val queuedGroups = remember(uiState.tasks) {
+                uiState.tasks
+                    .filter { !it.completed }
+                    .groupBy { if (it.exerciseId.isNotBlank()) it.exerciseId else it.title }
+                    .map { (key, groupTasks) -> TaskGroup(key, groupTasks.sortedBy { it.setNumber }) }
             }
+
+            val doneTasks = remember(uiState.tasks) {
+                uiState.tasks.filter { it.completed }
+            }
+
+            val isQueueTab = uiState.selectedTab == "queue"
 
             if (uiState.tasks.isEmpty()) {
                 EmptyStateCard(
@@ -162,13 +168,13 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
                         if (uiState.userProfile == null) showProfileDialog = true else showReviewDialog = true
                     }
                 )
-            } else if (displayTasks.isEmpty()) {
+            } else if ((isQueueTab && queuedGroups.isEmpty()) || (!isQueueTab && doneTasks.isEmpty())) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (uiState.selectedTab == "queue") "هیچ تمرینی در صف انجام نیست! 🎉" else "هنوز تمرینی را به‌طور کامل به پایان نرسانده‌اید.",
+                        text = if (isQueueTab) "هیچ تمرینی در صف انجام نیست! 🎉" else "هنوز تمرینی را به‌طور کامل به پایان نرسانده‌اید.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -179,13 +185,33 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
                     contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    items(displayTasks, key = { it.taskId }) { task ->
-                        SingleSetTaskCard(
-                            task = task,
-                            onToggleStatus = { taskId, currentStatus ->
-                                viewModel.toggleTaskCompletion(taskId, currentStatus)
+                    if (isQueueTab) {
+                        items(queuedGroups, key = { it.key }) { group ->
+                            if (group.tasks.size == 1) {
+                                SingleSetTaskCard(
+                                    task = group.tasks.first(),
+                                    onToggleStatus = { taskId, currentStatus ->
+                                        viewModel.toggleTaskCompletion(taskId, currentStatus)
+                                    }
+                                )
+                            } else {
+                                StackedExerciseTaskCard(
+                                    taskGroup = group,
+                                    onToggleStatus = { taskId, currentStatus ->
+                                        viewModel.toggleTaskCompletion(taskId, currentStatus)
+                                    }
+                                )
                             }
-                        )
+                        }
+                    } else {
+                        items(doneTasks, key = { it.taskId }) { task ->
+                            SingleSetTaskCard(
+                                task = task,
+                                onToggleStatus = { taskId, currentStatus ->
+                                    viewModel.toggleTaskCompletion(taskId, currentStatus)
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -528,6 +554,288 @@ fun SegmentedButtonOption(
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                 color = contentColor
             )
+        }
+    }
+}
+
+data class TaskGroup(
+    val key: String,
+    val tasks: List<WorkoutTaskEntity>
+)
+
+@Composable
+fun StackedExerciseTaskCard(
+    taskGroup: TaskGroup,
+    onToggleStatus: (taskId: String, currentStatus: Boolean) -> Unit
+) {
+    var isExpanded by remember { mutableStateOf(false) }
+    val activeTask = taskGroup.tasks.first()
+    val totalRemainingSets = taskGroup.tasks.size
+    val context = LocalContext.current
+
+    if (!isExpanded) {
+        val peekingCount = (totalRemainingSets - 1).coerceAtMost(2)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = (peekingCount * 6).dp, start = (peekingCount * 8).dp)
+        ) {
+            // Render peeking background card layers behind the front card (stacked book pages effect)
+            for (i in peekingCount downTo 1) {
+                val offsetX = (-8 * i).dp
+                val offsetY = (-6 * i).dp
+
+                Card(
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f - (i * 0.12f))
+                    ),
+                    border = BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = (2 - i).dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset(x = offsetX, y = offsetY)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.Start,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "ست بعدی (${activeTask.setNumber + i})",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(130.dp))
+                }
+            }
+
+            // Top Front Card
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    // Exercise Title & Stacked Set Badges Header
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = activeTask.title,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Layers,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(14.dp),
+                                            tint = MaterialTheme.colorScheme.onTertiaryContainer
+                                        )
+                                        Text(
+                                            text = "$totalRemainingSets ست در صف",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                                        )
+                                    }
+                                }
+
+                                Surface(
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Text(
+                                        text = "ست ${activeTask.setNumber} از ${activeTask.totalSets}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        if (activeTask.targetPerSet.isNotBlank()) {
+                            Surface(
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(
+                                    text = "هدف هر ست: ${activeTask.targetPerSet}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    if (activeTask.description.isNotBlank()) {
+                        Text(
+                            text = activeTask.description,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            lineHeight = 20.sp
+                        )
+                    }
+
+                    // Search Images Button
+                    OutlinedButton(
+                        onClick = {
+                            val searchQuery = Uri.encode("حرکت ورزشی ${activeTask.title}")
+                            val intent = Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse("https://www.google.com/search?q=$searchQuery&tbm=isch")
+                            )
+                            context.startActivity(intent)
+                        },
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "جستجوی تصاویر گوگل",
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "مشاهده تصاویر حرکت در گوگل",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    // Action Buttons Row: Complete Set + Expand Stack Toggle
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Button(
+                            onClick = { onToggleStatus(activeTask.taskId, activeTask.completed) },
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            )
+                        ) {
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "تکمیل ست ${activeTask.setNumber}",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        IconButton(
+                            onClick = { isExpanded = true },
+                            modifier = Modifier
+                                .background(
+                                    MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
+                                    shape = RoundedCornerShape(14.dp)
+                                )
+                                .size(48.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.UnfoldMore,
+                                contentDescription = "مشاهده تمام ست‌ها",
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        // Expanded Mode (shows all sets in group)
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+            shape = RoundedCornerShape(24.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Layers,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = "${activeTask.title} (${taskGroup.tasks.size} ست)",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+
+                    TextButton(onClick = { isExpanded = false }) {
+                        Text("بستن لایه‌ها 🔼", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+
+                taskGroup.tasks.forEach { task ->
+                    SingleSetTaskCard(
+                        task = task,
+                        onToggleStatus = onToggleStatus
+                    )
+                }
+            }
         }
     }
 }
