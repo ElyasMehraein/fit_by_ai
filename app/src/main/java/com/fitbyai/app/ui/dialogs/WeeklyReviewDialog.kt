@@ -171,10 +171,16 @@ fun WeeklyReviewDialog(
                             )
                         )
 
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Text("فشار تمرینات (RPE)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text("${rpe.toInt()} / ۱۰", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
                         }
+                        Text(
+                            text = "💡 RPE چیست؟ شاخص سنجش میزان فشار تمرین از ۱ تا ۱۰؛ (۱ یعنی بسیار سبک و بی‌فشار، ۱۰ یعنی حداکثر فشار و ناتوانی مطلق).",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        )
                         Slider(
                             value = rpe,
                             onValueChange = { rpe = it },

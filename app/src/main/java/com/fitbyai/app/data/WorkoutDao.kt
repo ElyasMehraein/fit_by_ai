@@ -16,6 +16,13 @@ interface WorkoutDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveUserProfile(profile: UserProfileEntity)
 
+    // Profile History
+    @Query("SELECT * FROM profile_history ORDER BY timestamp DESC")
+    fun getProfileHistoryFlow(): Flow<List<ProfileHistoryEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertProfileHistory(history: ProfileHistoryEntity)
+
     // Workout Set Tasks
     @Query("SELECT * FROM workout_tasks")
     fun getTasksFlow(): Flow<List<WorkoutTaskEntity>>

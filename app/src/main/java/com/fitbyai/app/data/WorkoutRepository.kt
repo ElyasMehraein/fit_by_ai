@@ -24,12 +24,34 @@ data class ProgramJsonPayload(
 class WorkoutRepository(private val dao: WorkoutDao) {
 
     val userProfileFlow: Flow<UserProfileEntity?> = dao.getUserProfileFlow()
+    val profileHistoryFlow: Flow<List<ProfileHistoryEntity>> = dao.getProfileHistoryFlow()
     val tasksFlow: Flow<List<WorkoutTaskEntity>> = dao.getTasksFlow()
     val historyFlow: Flow<List<WeeklyHistoryEntity>> = dao.getHistoryFlow()
     val metadataFlow: Flow<WeeklyMetadataEntity?> = dao.getMetadataFlow()
 
-    suspend fun saveUserProfile(profile: UserProfileEntity) {
-        dao.saveUserProfile(profile)
+    suspend fun saveUserProfile(newProfile: UserProfileEntity) {
+        val oldProfile = dao.getUserProfile()
+        if (oldProfile != null) {
+            val historyItem = ProfileHistoryEntity(
+                timestamp = System.currentTimeMillis(),
+                height = oldProfile.height,
+                age = oldProfile.age,
+                gender = oldProfile.gender,
+                goal = oldProfile.goal,
+                baseWeight = oldProfile.baseWeight,
+                baseWaist = oldProfile.baseWaist,
+                experience = oldProfile.experience,
+                daysPerWeek = oldProfile.daysPerWeek,
+                equipment = oldProfile.equipment,
+                limitations = oldProfile.limitations,
+                targetWeight = oldProfile.targetWeight,
+                sessionDuration = oldProfile.sessionDuration,
+                activityLevel = oldProfile.activityLevel,
+                healthConditions = oldProfile.healthConditions
+            )
+            dao.insertProfileHistory(historyItem)
+        }
+        dao.saveUserProfile(newProfile)
     }
 
     suspend fun updateTaskStatus(taskId: String, completed: Boolean) {
@@ -75,13 +97,17 @@ class WorkoutRepository(private val dao: WorkoutDao) {
 - وضع دردهای جدید یا عضلانی: ${pain.ifEmpty { "بدون درد" }}
 - بازخورد و حس کار با برنامه قبلی: ${feedback.ifEmpty { "ثبت نشده" }}
 
-شناسنامه اولیه من:
+شناسنامه اولیه و کامل من:
 - قد: ${profile?.height ?: "-"} cm | سن: ${profile?.age ?: "-"} | جنسیت: ${profile?.gender ?: "-"}
+- وزن پایه: ${profile?.baseWeight ?: "-"} kg | دور کمر پایه: ${profile?.baseWaist ?: "-"} cm | وزن هدف: ${profile?.targetWeight?.ifEmpty { "-" } ?: "-"} kg
 - هدف اصلی: ${profile?.goal ?: "-"}
 - سابقه تمرینی: ${profile?.experience ?: "-"}
 - روزهای تمرین در هفته: ${profile?.daysPerWeek ?: "-"}
+- زمان در دسترس هر جلسه: ${profile?.sessionDuration?.ifEmpty { "-" } ?: "-"}
+- سطح فعالیت روزمره: ${profile?.activityLevel?.ifEmpty { "-" } ?: "-"}
 - تجهیزات در دسترس: ${profile?.equipment ?: "-"}
-- آسیب‌های قبلی: ${profile?.limitations ?: "-"}
+- آسیب‌های قبلی و محدودیت‌ها: ${profile?.limitations ?: "-"}
+- بیماری خاص یا داروهای مصرفی: ${profile?.healthConditions?.ifEmpty { "ندارد" } ?: "ندارد"}
 
 تاریخچه پیشرفت هفته‌های گذشته من:
 ${gson.toJson(historySummary)}

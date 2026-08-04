@@ -196,9 +196,10 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
     if (showProfileDialog) {
         ProfileDialog(
             currentProfile = uiState.userProfile,
+            profileHistory = uiState.profileHistory,
             onDismiss = { showProfileDialog = false },
-            onSave = { h, a, g, goal, bw, bwa, exp, days, eq, lim ->
-                viewModel.saveProfile(h, a, g, goal, bw, bwa, exp, days, eq, lim)
+            onSave = { h, a, g, goal, bw, bwa, exp, days, eq, lim, tw, dur, act, hc ->
+                viewModel.saveProfile(h, a, g, goal, bw, bwa, exp, days, eq, lim, tw, dur, act, hc)
             }
         )
     }

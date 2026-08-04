@@ -9,11 +9,12 @@ import androidx.room.TypeConverters
 @Database(
     entities = [
         UserProfileEntity::class,
+        ProfileHistoryEntity::class,
         WorkoutTaskEntity::class,
         WeeklyHistoryEntity::class,
         WeeklyMetadataEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(StringListConverter::class)

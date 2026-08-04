@@ -9,6 +9,7 @@ import kotlinx.coroutines.launch
 
 data class WorkoutUiState(
     val userProfile: UserProfileEntity? = null,
+    val profileHistory: List<ProfileHistoryEntity> = emptyList(),
     val tasks: List<WorkoutTaskEntity> = emptyList(),
     val history: List<WeeklyHistoryEntity> = emptyList(),
     val uploadTimestamp: Long? = null,
@@ -28,12 +29,14 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
         viewModelScope.launch {
             combine(
                 repository.userProfileFlow,
+                repository.profileHistoryFlow,
                 repository.tasksFlow,
                 repository.historyFlow,
                 repository.metadataFlow
-            ) { profile, tasks, history, metadata ->
+            ) { profile, profileHistory, tasks, history, metadata ->
                 WorkoutUiState(
                     userProfile = profile,
+                    profileHistory = profileHistory,
                     tasks = tasks,
                     history = history,
                     uploadTimestamp = metadata?.uploadTimestamp,
@@ -62,13 +65,17 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
     fun saveProfile(
         height: String, age: String, gender: String, goal: String,
         baseWeight: String, baseWaist: String, experience: String,
-        daysPerWeek: String, equipment: String, limitations: String
+        daysPerWeek: String, equipment: String, limitations: String,
+        targetWeight: String = "", sessionDuration: String = "",
+        activityLevel: String = "", healthConditions: String = ""
     ) {
         viewModelScope.launch {
             val profile = UserProfileEntity(
                 height = height, age = age, gender = gender, goal = goal,
                 baseWeight = baseWeight, baseWaist = baseWaist, experience = experience,
-                daysPerWeek = daysPerWeek, equipment = equipment, limitations = limitations
+                daysPerWeek = daysPerWeek, equipment = equipment, limitations = limitations,
+                targetWeight = targetWeight, sessionDuration = sessionDuration,
+                activityLevel = activityLevel, healthConditions = healthConditions
             )
             repository.saveUserProfile(profile)
         }

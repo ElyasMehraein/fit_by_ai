@@ -18,8 +18,51 @@ data class UserProfileEntity(
     val experience: String,
     val daysPerWeek: String,
     val equipment: String,
-    val limitations: String
+    val limitations: String,
+    val targetWeight: String = "",
+    val sessionDuration: String = "",
+    val activityLevel: String = "",
+    val healthConditions: String = ""
 )
+
+@Entity(tableName = "profile_history")
+data class ProfileHistoryEntity(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val timestamp: Long,
+    val height: String,
+    val age: String,
+    val gender: String,
+    val goal: String,
+    val baseWeight: String,
+    val baseWaist: String,
+    val experience: String,
+    val daysPerWeek: String,
+    val equipment: String,
+    val limitations: String,
+    val targetWeight: String = "",
+    val sessionDuration: String = "",
+    val activityLevel: String = "",
+    val healthConditions: String = ""
+)
+
+fun getRelativeTimeSpanString(timestamp: Long): String {
+    val now = System.currentTimeMillis()
+    val diffMs = now - timestamp
+    if (diffMs < 0) return "همین الان"
+    val diffMinutes = diffMs / (1000 * 60)
+    val diffHours = diffMs / (1000 * 60 * 60)
+    val diffDays = diffMs / (1000 * 60 * 60 * 24)
+
+    return when {
+        diffMinutes < 2 -> "همین الان"
+        diffMinutes < 60 -> "$diffMinutes دقیقه پیش"
+        diffHours < 24 -> "$diffHours ساعت پیش"
+        diffDays == 1L -> "دیروز"
+        diffDays < 30 -> "$diffDays روز پیش"
+        diffDays < 365 -> "${diffDays / 30} ماه پیش"
+        else -> "${diffDays / 365} سال پیش"
+    }
+}
 
 @Entity(tableName = "workout_tasks")
 data class WorkoutTaskEntity(
