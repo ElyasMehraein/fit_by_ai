@@ -3,6 +3,8 @@ package com.fitbyai.app.ui.dialogs
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -290,41 +292,95 @@ fun WeeklyReviewDialog(
                 Surface(
                     color = MaterialTheme.colorScheme.primaryContainer,
                     shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            clipboard.setPrimaryClip(ClipData.newPlainText("AI Prompt", generatedPrompt))
-                            Toast.makeText(context, "پرامپت کپی شد! اکنون آن را در ChatGPT بچسبانید.", Toast.LENGTH_LONG).show()
-                        }
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(
+                    Column(
                         modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = "کپی", tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                "کپی",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
                             )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "پرامپت اختصاصی هوش مصنوعی آماده شد!",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "می‌توانید متن پرامپت را کپی کنید یا مستقیماً به برنامه ChatGPT بفرستید.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f),
+                                    lineHeight = 18.sp
+                                )
+                            }
                         }
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("پرامپت آماده شد! (جهت کپی کلیک کنید)", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "بعد از کپی، یک نرم افزار هوش مصنوعی مثلا چت جی پی تی را باز کنید و متن کپی شده را وارد آن کنید و پاسخ آن را برگردانید",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f),
-                                lineHeight = 18.sp
-                            )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // Copy Prompt Button
+                            Button(
+                                onClick = {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    clipboard.setPrimaryClip(ClipData.newPlainText("AI Prompt", generatedPrompt))
+                                    Toast.makeText(context, "پرامپت کپی شد!", Toast.LENGTH_SHORT).show()
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                ),
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 10.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ContentCopy,
+                                    contentDescription = "کپی",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "کپی پرامپت",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            // Send to ChatGPT Button
+                            Button(
+                                onClick = {
+                                    openChatGPT(context, generatedPrompt)
+                                },
+                                modifier = Modifier.weight(1.2f),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF10A37F),
+                                    contentColor = Color.White
+                                ),
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 10.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Send,
+                                    contentDescription = "ChatGPT",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "ارسال به ChatGPT",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }
@@ -559,3 +615,55 @@ fun MetricInput(
         )
     )
 }
+
+private fun openChatGPT(context: Context, promptText: String) {
+    // 1. Copy prompt to clipboard first
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    clipboard.setPrimaryClip(ClipData.newPlainText("AI Prompt", promptText))
+
+    val chatGptPackage = "com.openai.chatgpt"
+
+    // 2. Try to launch ChatGPT app directly with prompt text via ACTION_SEND
+    val sendIntent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, promptText)
+        setPackage(chatGptPackage)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+
+    val isAppInstalled = try {
+        context.packageManager.getPackageInfo(chatGptPackage, 0)
+        true
+    } catch (e: Exception) {
+        false
+    }
+
+    if (isAppInstalled) {
+        try {
+            context.startActivity(sendIntent)
+            Toast.makeText(context, "پرامپت کپی شد و ChatGPT باز شد", Toast.LENGTH_SHORT).show()
+            return
+        } catch (e: Exception) {
+            val launchIntent = context.packageManager.getLaunchIntentForPackage(chatGptPackage)
+            if (launchIntent != null) {
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                context.startActivity(launchIntent)
+                Toast.makeText(context, "پرامپت کپی شد! در چت ChatGPT چسبانید (Paste کنید).", Toast.LENGTH_LONG).show()
+                return
+            }
+        }
+    }
+
+    // 3. Fallback: Open ChatGPT web with prompt text
+    try {
+        val encodedPrompt = Uri.encode(promptText)
+        val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://chatgpt.com/?q=$encodedPrompt")).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(webIntent)
+        Toast.makeText(context, "پرامپت کپی شد و مرورگر باز شد", Toast.LENGTH_SHORT).show()
+    } catch (e: Exception) {
+        Toast.makeText(context, "پرامپت کپی شد! می‌توانید آن را در ChatGPT قرار دهید.", Toast.LENGTH_LONG).show()
+    }
+}
+
