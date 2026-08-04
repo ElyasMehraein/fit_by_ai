@@ -38,7 +38,6 @@ fun ManualProgramDialog(
     var weeklySetsText by remember { mutableStateOf("6") }
     var targetPerSet by remember { mutableStateOf("۱۰ الی ۱۲ تکرار (RIR 2)") }
     var targetMuscle by remember { mutableStateOf("سینه") }
-    var movementPattern by remember { mutableStateOf("Push") }
     var description by remember { mutableStateOf("") }
 
     // Recovery inputs for archiving current week if applicable
@@ -50,7 +49,6 @@ fun ManualProgramDialog(
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val muscleOptions = listOf("سینه", "پشت", "پا", "شانه", "بازو", "شکم", "کل بدن")
-    val patternOptions = listOf("Push", "Pull", "Squat", "Hinge", "Lunge", "Carry", "Core")
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -150,29 +148,28 @@ fun ManualProgramDialog(
                             modifier = Modifier.fillMaxWidth()
                         )
 
-                        // Weekly Sets & Target Per Set
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            OutlinedTextField(
-                                value = weeklySetsText,
-                                onValueChange = { weeklySetsText = it },
-                                label = { Text("ست هفتگی") },
-                                leadingIcon = { Icon(Icons.Default.Repeat, contentDescription = null) },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                shape = RoundedCornerShape(16.dp),
-                                modifier = Modifier.weight(1f)
-                            )
+                        // Weekly Sets (Select All on focus/click)
+                        SelectAllOutlinedTextField(
+                            value = weeklySetsText,
+                            onValueChange = { weeklySetsText = it },
+                            label = { Text("ست هفتگی") },
+                            leadingIcon = { Icon(Icons.Default.Repeat, contentDescription = null) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
 
-                            OutlinedTextField(
-                                value = targetPerSet,
-                                onValueChange = { targetPerSet = it },
-                                label = { Text("هدف/تکرار هر ست") },
-                                leadingIcon = { Icon(Icons.Default.FormatListNumbered, contentDescription = null) },
-                                singleLine = true,
-                                shape = RoundedCornerShape(16.dp),
-                                modifier = Modifier.weight(1.6f)
-                            )
-                        }
+                        // Target Per Set (Takes full width)
+                        OutlinedTextField(
+                            value = targetPerSet,
+                            onValueChange = { targetPerSet = it },
+                            label = { Text("هدف/تکرار هر ست") },
+                            leadingIcon = { Icon(Icons.Default.FormatListNumbered, contentDescription = null) },
+                            singleLine = true,
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        )
 
                         // Target Muscle Selection Chips
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -209,48 +206,15 @@ fun ManualProgramDialog(
                             }
                         }
 
-                        // Movement Pattern Selection Chips
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(
-                                text = "الگوی حرکتی",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                patternOptions.take(4).forEach { option ->
-                                    FilterChip(
-                                        selected = movementPattern == option,
-                                        onClick = { movementPattern = option },
-                                        label = { Text(option, style = MaterialTheme.typography.labelSmall) },
-                                        shape = RoundedCornerShape(10.dp)
-                                    )
-                                }
-                            }
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                patternOptions.drop(4).forEach { option ->
-                                    FilterChip(
-                                        selected = movementPattern == option,
-                                        onClick = { movementPattern = option },
-                                        label = { Text(option, style = MaterialTheme.typography.labelSmall) },
-                                        shape = RoundedCornerShape(10.dp)
-                                    )
-                                }
-                            }
-                        }
-
-                        // Description
+                        // Description (Multi-line with 3 lines height for easy text entry)
                         OutlinedTextField(
                             value = description,
                             onValueChange = { description = it },
                             label = { Text("توضیحات و نکات تکنیکی (اختیاری)") },
                             leadingIcon = { Icon(Icons.Default.Notes, contentDescription = null) },
-                            singleLine = true,
+                            singleLine = false,
+                            minLines = 3,
+                            maxLines = 6,
                             shape = RoundedCornerShape(16.dp),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -277,7 +241,7 @@ fun ManualProgramDialog(
                                         images = emptyList(),
                                         weeklySets = sets,
                                         targetPerSet = targetPerSet.ifEmpty { "۱۰ الی ۱۲ تکرار" },
-                                        movementPattern = movementPattern,
+                                        movementPattern = "",
                                         targetMuscle = targetMuscle
                                     )
                                 )
@@ -374,17 +338,6 @@ fun ManualProgramDialog(
                                                     text = ex.targetMuscle ?: "عمومی",
                                                     style = MaterialTheme.typography.labelSmall,
                                                     color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                                )
-                                            }
-                                            Surface(
-                                                color = MaterialTheme.colorScheme.tertiaryContainer,
-                                                shape = RoundedCornerShape(6.dp)
-                                            ) {
-                                                Text(
-                                                    text = ex.movementPattern ?: "Push",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.onTertiaryContainer,
                                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                                 )
                                             }

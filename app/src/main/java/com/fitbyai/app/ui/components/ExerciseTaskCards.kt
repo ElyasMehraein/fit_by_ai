@@ -168,7 +168,7 @@ fun StackedExerciseTaskCard(
                             }
                         }
 
-                        if (activeTask.targetPerSet.isNotBlank() || activeTask.targetMuscle.isNotBlank() || activeTask.movementPattern.isNotBlank()) {
+                        if (activeTask.targetPerSet.isNotBlank() || activeTask.targetMuscle.isNotBlank()) {
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 verticalAlignment = Alignment.CenterVertically
@@ -183,20 +183,6 @@ fun StackedExerciseTaskCard(
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                        )
-                                    }
-                                }
-                                if (activeTask.movementPattern.isNotBlank()) {
-                                    Surface(
-                                        color = MaterialTheme.colorScheme.tertiaryContainer,
-                                        shape = RoundedCornerShape(8.dp)
-                                    ) {
-                                        Text(
-                                            text = "الگو: ${activeTask.movementPattern}",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onTertiaryContainer,
                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                         )
                                     }
@@ -363,7 +349,7 @@ fun SingleSetTaskCard(
                         }
                     }
 
-                    if (task.targetPerSet.isNotBlank() || task.targetMuscle.isNotBlank() || task.movementPattern.isNotBlank()) {
+                    if (task.targetPerSet.isNotBlank() || task.targetMuscle.isNotBlank()) {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -378,20 +364,6 @@ fun SingleSetTaskCard(
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                    )
-                                }
-                            }
-                            if (task.movementPattern.isNotBlank()) {
-                                Surface(
-                                    color = MaterialTheme.colorScheme.tertiaryContainer,
-                                    shape = RoundedCornerShape(8.dp)
-                                ) {
-                                    Text(
-                                        text = "الگو: ${task.movementPattern}",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onTertiaryContainer,
                                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                     )
                                 }
