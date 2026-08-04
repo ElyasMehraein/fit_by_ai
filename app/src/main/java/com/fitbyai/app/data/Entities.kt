@@ -74,7 +74,9 @@ data class WorkoutTaskEntity(
     val images: List<String>,
     val setNumber: Int,
     val totalSets: Int,
-    val completed: Boolean
+    val completed: Boolean,
+    val movementPattern: String = "",
+    val targetMuscle: String = ""
 )
 
 @Entity(tableName = "weekly_history")
@@ -93,7 +95,9 @@ data class WeeklyHistoryEntity(
     val completionRate: Int,
     val feedback: String,
     val exerciseCount: Int,
-    val exerciseSummary: String = ""
+    val exerciseSummary: String = "",
+    val muscleSoreness: String = "",
+    val jointPain: String = ""
 )
 
 @Entity(tableName = "weekly_metadata")

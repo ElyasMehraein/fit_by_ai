@@ -14,7 +14,9 @@ data class ExerciseJson(
     val images: List<String>?,
     val weeklySets: Int,
     val targetPerSet: String? = null,
-    val target: String? = null
+    val target: String? = null,
+    val movementPattern: String? = null,
+    val targetMuscle: String? = null
 )
 
 data class ProgramJsonPayload(
@@ -65,7 +67,9 @@ class WorkoutRepository(private val dao: WorkoutDao) {
         energy: Int,
         rpe: Int,
         pain: String,
-        feedback: String
+        feedback: String,
+        muscleSoreness: String = "نرمال",
+        jointPain: String = "بدون درد مفصلی"
     ): String {
         val profile = dao.getUserProfile()
         val historyList = dao.getHistory()
@@ -82,7 +86,9 @@ class WorkoutRepository(private val dao: WorkoutDao) {
             val lines = grouped.map { (_, tasks) ->
                 val first = tasks.first()
                 val completedInGroup = tasks.count { it.completed }
-                "  • ${first.title}: ${tasks.size} ست (هدف هر ست: ${first.targetPerSet.ifEmpty { "اجرا" }}) | وضعیت: $completedInGroup از ${tasks.size} ست انجام شد"
+                val muscleStr = if (first.targetMuscle.isNotBlank()) " | عضله: ${first.targetMuscle}" else ""
+                val patternStr = if (first.movementPattern.isNotBlank()) " | الگوی حرکتی: ${first.movementPattern}" else ""
+                "  • ${first.title}: ${tasks.size} ست (هدف هر ست: ${first.targetPerSet.ifEmpty { "اجرا" }}$muscleStr$patternStr) | وضعیت: $completedInGroup از ${tasks.size} ست انجام شد"
             }.joinToString("\n")
 
             """
@@ -99,10 +105,12 @@ class WorkoutRepository(private val dao: WorkoutDao) {
         val pastWeeksHistoryText = if (historyList.isNotEmpty()) {
             historyList.joinToString("\n\n") { h ->
                 val exText = if (h.exerciseSummary.isNotBlank()) "\n  • حرکات تمرین‌شده: ${h.exerciseSummary}" else ""
+                val soreText = if (h.muscleSoreness.isNotBlank()) " | کوفتگی عضلانی: ${h.muscleSoreness}" else ""
+                val jointText = if (h.jointPain.isNotBlank()) " | درد مفصلی: ${h.jointPain}" else ""
                 """
                 - هفته ${h.week} (تاریخ: ${h.date}):
                   • وزن: ${h.weight} کیلوگرم | دور کمر: ${h.waist} سانتی‌متر
-                  • ریکاوری: خواب: ${h.sleep} | انرژی: ${h.energy}/10 | سختی RPE: ${h.rpe}/10 | وضعیت درد: ${h.pain}
+                  • ریکاوری: خواب: ${h.sleep} | انرژی: ${h.energy}/10 | سختی RPE: ${h.rpe}/10 | وضعیت درد: ${h.pain}$soreText$jointText
                   • ست‌های تکمیل‌شده: ${h.completedSets} از ${h.totalSets} ست (${h.completionRate}%)
                   • بازخورد کاربر: ${h.feedback.ifEmpty { "ثبت نشده" }}$exText
                 """.trimIndent()
@@ -111,9 +119,15 @@ class WorkoutRepository(private val dao: WorkoutDao) {
             "هنوز سابقه هفته‌های قبلی ثبت نشده است (این اولین هفته تمرینی است)."
         }
 
+        val jointPainNotice = if (jointPain.isNotBlank() && jointPain != "بدون درد مفصلی") {
+            "⚠️ هشدار ارزیابی بیومکانیک: کاربر درد در مفاصل/تاندون‌های «$jointPain» را گزارش داده است. حتماً حرکات پرفشار روی این مفصل را با گزینه‌های ایمن‌تر جایگزین کن."
+        } else {
+            "وضعیت مفاصل: هیچ درد مفصلی/تاندونی حادی گزارش نشده است."
+        }
+
         return """
-تو یک مربی ارشد و حرفه‌ای بدنسازی و فیتنس هستی.
-من یک هفته برنامه تمرینی قبلی را کامل کرده‌ام. اطلاعات سنجش بدنی، ریکاوری و بازخورد هفته اخیر من:
+تو یک متخصص بدنسازی، بیومکانیک و علوم ورزشی (PhD in Kinesiology & Exercise Science) هستی.
+من یک هفته برنامه تمرینی قبلی را کامل کرده‌ام. اطلاعات سنجش بدنی، ریکاوری، وضعیت مفاصل و بازخورد هفته اخیر من:
 
 - هفته کاری فعلی: $weekNumber
 - وزن جدید: $weight کیلوگرم
@@ -121,8 +135,11 @@ class WorkoutRepository(private val dao: WorkoutDao) {
 - میانگین خواب شبانه‌روز: $sleep
 - سطح انرژی بدنی (1 تا 10): $energy
 - میزان سختی تمرین / RPE (1 تا 10): $rpe
-- وضع دردهای جدید یا عضلانی: ${pain.ifEmpty { "بدون درد" }}
+- کوفتگی عضلانی طبیعی (DOMS): ${muscleSoreness.ifEmpty { "نرمال" }}
+- وضعیت دردهای مفصلی/تاندونی: ${jointPain.ifEmpty { "بدون درد مفصلی" }}
 - بازخورد و حس کار با برنامه قبلی: ${feedback.ifEmpty { "ثبت نشده" }}
+
+$jointPainNotice
 
 ========================================
 $currentWeekWorkoutText
@@ -145,23 +162,27 @@ $currentWeekWorkoutText
 $pastWeeksHistoryText
 ========================================
 
-دستورالعمل مهم جهت طراحی برنامه جدید:
-۱. لطفاً در ابتدا از من بخواه یک عکس جدید از هیکلم با لباس مناسب، نور خوب و بدون فیلتر برات بفرستم.
+دستورالعمل‌های علمی جهت طراحی برنامه جدید:
+۱. در ابتدا از من بخواه یک عکس جدید از هیکلم با لباس مناسب، نور خوب و بدون فیلتر برات بفرستم.
 ۲. پس از دریافت عکس، روند تغییرات ظاهری، وزن، دور کمر، خواب، انرژی و بازخوردهای من را دقیقاً مقایسه کن.
-۳. بر اساس حرکات هفته قبل و میزان ست‌های انجام‌شده، اصل اضافه بار تدریجی (Progressive Overload) را رعایت کن. در صورت ضرورت، شدت (RPE)، تعداد ست‌ها یا حجم تمرین را تنظیم کرده یا در صورت نیاز هفته دِلود (Deload) تجویز کن.
-۴. برنامه تمرینی کلاً به‌صورت یک بانک/حجم کلی ست‌های هفتگی (Weekly Sets) باشد و به روزهای خاص تقسیم نشود؛ به طوری که کاربر مختار باشد تمام ست‌ها را در ۱ روز بزند یا بین ۲ تا ۶ روز تقسیم کند و محدودیتی نداشته باشد.
-۵. شناسه هر حرکت (id) باید اسم دقیق و استاندارد انگلیسی حرکت مانند bench_press، barbell_squat، push_up، dumbbell_bicep_curl، lat_pulldown، plank، deadlift و... باشد.
-۶. برای هر حرکت حتماً مقدار/هدف دقیق هر ست (مثلاً «۱۰ الی ۱۲ تکرار»، «۴۵ ثانیه»، «۲۰ شنا»، «۱۵ دقیقه پیاده‌روی» یا «تا ناتوانی») را در کلید targetPerSet مشخص کن.
-۷. خروجی نهایی برنامه تمرینی هفته جدید را فقط و فقط در قالب یک آبجکت معتبر JSON مطابق ساختار زیر ارسال کن (بدون هیچ متن اضافی قبل یا بعد از کد):
+۳. بر اساس اصل اضافه بار تدریجی (Progressive Overload)، شدت (RPE)، تعداد ست‌ها یا حجم تمرین را تنظیم کرده یا در صورت خستگی شدید/درد مفصلی هفته دِلود (Deload) تجویز کن.
+۴. **الگوهای حرکتی پایه (Movement Patterns)**: حتماً تعادل بین الگوهای حرکتی اصلی (Push, Pull, Squat, Hinge, Lunge, Carry, Core) و تعادل عضلات آگونیست و آنتاگونیست (مثلاً سینه و پشت، چهارسر و همسترینگ) را رعایت کن.
+۵. **تکرار در ذخیره (RIR)**: در کلید targetPerSet علاوه بر تعداد تکرار، حتماً مقدار RIR مناسب (مثلاً RIR 1 تا 3) را ذکر کن (مثلاً: «۱۰ الی ۱۲ تکرار (RIR 2)»).
+۶. **عضله هدف (targetMuscle)** و **الگوی حرکتی (movementPattern)** را برای هر حرکت به صورت شفاف تعیین کن (از مقادیر استاندارد فارسی مانند: سینه، پشت، پا، شانه، بازو، شکم و پهلو).
+۷. برنامه به‌صورت یک بانک حجم کلی ست‌های هفتگی (Weekly Sets) باشد و به روزهای خاص تقسیم نشود تا کاربر آزادانه ست‌ها را در طول هفته توزیع کند.
+۸. شناسه هر حرکت (id) باید اسم دقیق انگلیسی مانند bench_press، barbell_squat، push_up، dumbbell_bicep_curl، lat_pulldown، plank، deadlift و... باشد.
+۹. خروجی نهایی برنامه تمرینی هفته جدید را فقط و فقط در قالب یک آبجکت معتبر JSON مطابق ساختار زیر ارسال کن (بدون هیچ متن اضافی قبل یا بعد از کد):
 
 {
   "exercises": [
     {
       "id": "bench_press",
       "title": "پرس سینه با هالتر",
-      "description": "توضیحات کامل تکنیک اجرای صحیح",
+      "description": "توضیحات کامل تکنیک اجرای صحیح و کنترل فاز منفی",
       "weeklySets": 4,
-      "targetPerSet": "۱۰ الی ۱۲ تکرار"
+      "targetPerSet": "۱۰ الی ۱۲ تکرار (RIR 2)",
+      "movementPattern": "Push",
+      "targetMuscle": "سینه"
     }
   ]
 }
@@ -176,7 +197,9 @@ $pastWeeksHistoryText
         energy: Int,
         rpe: Int,
         pain: String,
-        feedback: String
+        feedback: String,
+        muscleSoreness: String = "نرمال",
+        jointPain: String = "بدون درد مفصلی"
     ): Result<Unit> {
         return try {
             val payload = Gson().fromJson(jsonRaw, ProgramJsonPayload::class.java)
@@ -215,7 +238,9 @@ $pastWeeksHistoryText
                     completionRate = if (totalCount > 0) ((doneCount.toDouble() / totalCount) * 100).toInt() else 100,
                     feedback = feedback.ifEmpty { "تمرینات هفته انجام شد" },
                     exerciseCount = payload.exercises.size,
-                    exerciseSummary = exerciseSummaryStr
+                    exerciseSummary = exerciseSummaryStr,
+                    muscleSoreness = muscleSoreness,
+                    jointPain = jointPain
                 )
                 dao.insertHistory(historyRecord)
             }
@@ -242,7 +267,9 @@ $pastWeeksHistoryText
                             images = emptyList(),
                             setNumber = s,
                             totalSets = ex.weeklySets,
-                            completed = false
+                            completed = false,
+                            movementPattern = ex.movementPattern ?: "",
+                            targetMuscle = ex.targetMuscle ?: ""
                         )
                     )
                 }

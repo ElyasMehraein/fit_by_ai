@@ -195,6 +195,14 @@ fun HistoryDialog(
                                                 Text("($waistText)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                                             }
                                         }
+                                        if (item.jointPain.isNotBlank() && item.jointPain != "بدون درد مفصلی") {
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text("درد مفصلی: ${item.jointPain}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                                        }
+                                        if (item.muscleSoreness.isNotBlank() && item.muscleSoreness != "بدون کوفتگی") {
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text("کوفتگی: ${item.muscleSoreness}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
+                                        }
                                     }
                                     Text("${item.completionRate}% انجام", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                                 }

@@ -83,7 +83,8 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
 
     fun generatePrompt(
         weight: String, waist: String, sleep: String,
-        energy: Int, rpe: Int, pain: String, feedback: String
+        energy: Int, rpe: Int, pain: String, feedback: String,
+        muscleSoreness: String = "نرمال", jointPain: String = "بدون درد مفصلی"
     ) {
         viewModelScope.launch {
             if (weight.isBlank() || waist.isBlank()) {
@@ -92,7 +93,7 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
             }
             _uiState.update { it.copy(errorMessage = null) }
             val prompt = repository.generateAiPrompt(
-                weight, waist, sleep, energy, rpe, pain, feedback
+                weight, waist, sleep, energy, rpe, pain, feedback, muscleSoreness, jointPain
             )
             _uiState.update { it.copy(generatedPrompt = prompt) }
         }
@@ -101,12 +102,13 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
     fun importProgram(
         jsonRaw: String, weight: String, waist: String,
         sleep: String, energy: Int, rpe: Int, pain: String, feedback: String,
+        muscleSoreness: String = "نرمال", jointPain: String = "بدون درد مفصلی",
         onSuccess: () -> Unit
     ) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             val result = repository.importJsonProgram(
-                jsonRaw, weight, waist, sleep, energy, rpe, pain, feedback
+                jsonRaw, weight, waist, sleep, energy, rpe, pain, feedback, muscleSoreness, jointPain
             )
             result.onSuccess {
                 _uiState.update { it.copy(isLoading = false, errorMessage = null, generatedPrompt = null) }

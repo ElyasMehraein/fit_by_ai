@@ -142,6 +142,9 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
                     }
                 )
 
+                // Weekly Muscle Volume Distribution Dashboard
+                MuscleVolumeDashboardCard(tasks = uiState.tasks)
+
                 // Segmented Tab Controls
                 M3SegmentedTabRow(
                     selectedTab = uiState.selectedTab,
@@ -260,11 +263,11 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
                 showReviewDialog = false
                 showProfileDialog = true
             },
-            onGeneratePrompt = { w, wa, s, e, rpe, pain, fb ->
-                viewModel.generatePrompt(w, wa, s, e, rpe, pain, fb)
+            onGeneratePrompt = { w, wa, s, e, rpe, pain, fb, ms, jp ->
+                viewModel.generatePrompt(w, wa, s, e, rpe, pain, fb, ms, jp)
             },
-            onImportProgram = { raw, w, wa, s, e, rpe, pain, fb ->
-                viewModel.importProgram(raw, w, wa, s, e, rpe, pain, fb) {
+            onImportProgram = { raw, w, wa, s, e, rpe, pain, fb, ms, jp ->
+                viewModel.importProgram(raw, w, wa, s, e, rpe, pain, fb, ms, jp) {
                     showReviewDialog = false
                 }
             }
@@ -708,18 +711,53 @@ fun StackedExerciseTaskCard(
                         }
                     }
 
-                    if (activeTask.targetPerSet.isNotBlank()) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                            shape = RoundedCornerShape(8.dp)
+                    if (activeTask.targetPerSet.isNotBlank() || activeTask.targetMuscle.isNotBlank() || activeTask.movementPattern.isNotBlank()) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = "هدف هر ست: ${activeTask.targetPerSet}",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
+                            if (activeTask.targetMuscle.isNotBlank()) {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text(
+                                        text = "عضله: ${activeTask.targetMuscle}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+                            if (activeTask.movementPattern.isNotBlank()) {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text(
+                                        text = "الگو: ${activeTask.movementPattern}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+                            if (activeTask.targetPerSet.isNotBlank()) {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text(
+                                        text = "هدف هر ست: ${activeTask.targetPerSet}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -1064,5 +1102,138 @@ fun NoWorkoutProgramStateCard(onGetStarted: () -> Unit) {
                 }
             }
         }
+    }
+}
+
+@Composable
+fun MuscleVolumeDashboardCard(tasks: List<WorkoutTaskEntity>) {
+    if (tasks.isEmpty()) return
+
+    val muscleVolumeMap = remember(tasks) {
+        val uniqueExercises = tasks.groupBy { if (it.exerciseId.isNotBlank()) it.exerciseId else it.title }
+        val volumeMap = mutableMapOf<String, Int>()
+
+        uniqueExercises.forEach { (_, groupTasks) ->
+            val first = groupTasks.first()
+            val muscle = when {
+                first.targetMuscle.isNotBlank() -> first.targetMuscle
+                else -> inferTargetMuscle(first.exerciseId, first.title)
+            }
+            volumeMap[muscle] = (volumeMap[muscle] ?: 0) + groupTasks.size
+        }
+        volumeMap
+    }
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.4f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(
+                        Icons.Default.BarChart,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = "توزیع حجم عضلانی هفتگی",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = "پنجره ۱۰ تا ۲۰ ست",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            val entriesList = muscleVolumeMap.entries.toList()
+            val firstRow = entriesList.take(4)
+            val secondRow = entriesList.drop(4).take(4)
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                firstRow.forEach { (muscle, sets) ->
+                    MuscleSetChip(muscle = muscle, sets = sets, modifier = Modifier.weight(1f))
+                }
+            }
+            if (secondRow.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    secondRow.forEach { (muscle, sets) ->
+                        MuscleSetChip(muscle = muscle, sets = sets, modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MuscleSetChip(muscle: String, sets: Int, modifier: Modifier = Modifier) {
+    val isOptimal = sets in 10..20
+    Surface(
+        modifier = modifier,
+        color = if (isOptimal) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = muscle,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "$sets ست",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = if (isOptimal) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+fun inferTargetMuscle(exerciseId: String, title: String): String {
+    val search = "$exerciseId $title".lowercase()
+    return when {
+        search.contains("squat") || search.contains("leg") || search.contains("lunge") || search.contains("calf") || search.contains("پا") -> "پا"
+        search.contains("press") && search.contains("bench") || search.contains("pushup") || search.contains("chest") || search.contains("سینه") -> "سینه"
+        search.contains("row") || search.contains("pull") || search.contains("lat") || search.contains("deadlift") || search.contains("پشت") -> "پشت"
+        search.contains("shoulder") || search.contains("raise") || search.contains("military") || search.contains("شانه") -> "شانه"
+        search.contains("curl") || search.contains("tricep") || search.contains("bicep") || search.contains("بازو") -> "بازو"
+        search.contains("plank") || search.contains("crunch") || search.contains("core") || search.contains("شکم") -> "شکم"
+        else -> "سایر"
     }
 }

@@ -45,8 +45,8 @@ fun WeeklyReviewDialog(
     profileLastUpdatedText: String = "همین الان",
     onDismiss: () -> Unit,
     onEditProfile: () -> Unit,
-    onGeneratePrompt: (weight: String, waist: String, sleep: String, energy: Int, rpe: Int, pain: String, feedback: String) -> Unit,
-    onImportProgram: (jsonRaw: String, weight: String, waist: String, sleep: String, energy: Int, rpe: Int, pain: String, feedback: String) -> Unit
+    onGeneratePrompt: (weight: String, waist: String, sleep: String, energy: Int, rpe: Int, pain: String, feedback: String, muscleSoreness: String, jointPain: String) -> Unit,
+    onImportProgram: (jsonRaw: String, weight: String, waist: String, sleep: String, energy: Int, rpe: Int, pain: String, feedback: String, muscleSoreness: String, jointPain: String) -> Unit
 ) {
     val context = LocalContext.current
     val composeClipboardManager = LocalClipboardManager.current
@@ -56,9 +56,14 @@ fun WeeklyReviewDialog(
     var sleepHours by remember { mutableStateOf(7.5f) }
     var energy by remember { mutableStateOf(8f) }
     var rpe by remember { mutableStateOf(7f) }
-    var pain by remember { mutableStateOf("") }
+    var muscleSoreness by remember { mutableStateOf("عادی / خفیف") }
+    var jointPain by remember { mutableStateOf("بدون درد مفصلی") }
+    var customJointPain by remember { mutableStateOf("") }
     var feedback by remember { mutableStateOf("") }
     var jsonInput by remember { mutableStateOf("") }
+
+    val jointOptions = listOf("بدون درد مفصلی", "شانه", "زانو", "مچ دست / آرنج", "کمر / ستون فقرات", "مچ پا")
+    val sorenessOptions = listOf("عادی / خفیف", "متوسط", "شدید (تاخیر بالای ۴۸ ساعت)")
 
     var detectedClipboardJson by remember { mutableStateOf<String?>(null) }
 
@@ -146,9 +151,10 @@ fun WeeklyReviewDialog(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Text("یک هفته اخیر اوضاع چطور بود؟", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                    Text("ارزیابی ریکاوری و فیزیولوژی هفته اخیر", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
 
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        // Sleep Slider
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("میانگین خواب روزانه", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text("${String.format("%.1f", sleepHours)} ساعت", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
@@ -164,8 +170,9 @@ fun WeeklyReviewDialog(
                             )
                         )
 
+                        // Energy Slider
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("سطح انرژی", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("سطح انرژی بدنی", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text("${energy.toInt()} / ۱۰", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                         }
                         Slider(
@@ -179,8 +186,9 @@ fun WeeklyReviewDialog(
                             )
                         )
 
+                        // RPE Slider
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text("فشار تمرینات", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("فشار تمرینات (RPE)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text("${rpe.toInt()} / ۱۰", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
                         }
                         Slider(
@@ -193,6 +201,56 @@ fun WeeklyReviewDialog(
                                 activeTrackColor = MaterialTheme.colorScheme.secondary
                             )
                         )
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                        // Muscle Soreness Selection (DOMS)
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("وضعیت کوفتگی عضلانی (DOMS):", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                sorenessOptions.forEach { option ->
+                                    val selected = muscleSoreness == option
+                                    FilterChip(
+                                        selected = selected,
+                                        onClick = { muscleSoreness = option },
+                                        label = { Text(option, style = MaterialTheme.typography.labelSmall) },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+                        }
+
+                        // Joint / Tendon Pain Assessment
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                                Text("وضعیت دردهای مفصلی / تاندونی (آسیب‌شناسی):", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+                            }
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    jointOptions.take(3).forEach { option ->
+                                        val selected = jointPain == option
+                                        FilterChip(
+                                            selected = selected,
+                                            onClick = { jointPain = option },
+                                            label = { Text(option, style = MaterialTheme.typography.labelSmall) },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                }
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    jointOptions.drop(3).forEach { option ->
+                                        val selected = jointPain == option
+                                        FilterChip(
+                                            selected = selected,
+                                            onClick = { jointPain = option },
+                                            label = { Text(option, style = MaterialTheme.typography.labelSmall) },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -200,9 +258,11 @@ fun WeeklyReviewDialog(
             // AI Prompt Generation Action
             Button(
                 onClick = {
+                    val finalJointPain = if (jointPain == "بدون درد مفصلی") "بدون درد مفصلی" else jointPain
                     onGeneratePrompt(
                         weight, waist, String.format("%.1f", sleepHours),
-                        energy.toInt(), rpe.toInt(), pain, feedback
+                        energy.toInt(), rpe.toInt(), finalJointPain, feedback,
+                        muscleSoreness, finalJointPain
                     )
                 },
                 modifier = Modifier
@@ -308,9 +368,11 @@ fun WeeklyReviewDialog(
                             Button(
                                 onClick = {
                                     jsonInput = detectedClipboardJson!!
+                                    val finalJointPain = if (jointPain == "بدون درد مفصلی") "بدون درد مفصلی" else jointPain
                                     onImportProgram(
                                         jsonInput, weight, waist, String.format("%.1f", sleepHours),
-                                        energy.toInt(), rpe.toInt(), pain, feedback
+                                        energy.toInt(), rpe.toInt(), finalJointPain, feedback,
+                                        muscleSoreness, finalJointPain
                                     )
                                 },
                                 shape = RoundedCornerShape(12.dp),
@@ -364,9 +426,11 @@ fun WeeklyReviewDialog(
 
                 Button(
                     onClick = {
+                        val finalJointPain = if (jointPain == "بدون درد مفصلی") "بدون درد مفصلی" else jointPain
                         onImportProgram(
                             jsonInput, weight, waist, String.format("%.1f", sleepHours),
-                            energy.toInt(), rpe.toInt(), pain, feedback
+                            energy.toInt(), rpe.toInt(), finalJointPain, feedback,
+                            muscleSoreness, finalJointPain
                         )
                     },
                     enabled = !isLoading && jsonInput.isNotBlank(),
