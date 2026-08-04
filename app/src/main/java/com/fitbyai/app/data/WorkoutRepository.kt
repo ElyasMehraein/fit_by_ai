@@ -72,43 +72,9 @@ class WorkoutRepository(private val dao: WorkoutDao) {
         jointPain: String = "بدون درد مفصلی"
     ): String {
         val profile = dao.getUserProfile()
-        val currentTasks = dao.getTasks()
-
-        // Log/snapshot current workout progress into history database if tasks exist
-        if (currentTasks.isNotEmpty()) {
-            val doneCount = currentTasks.count { it.completed }
-            val totalCount = currentTasks.size
-            val existingHistory = dao.getHistory()
-            val exerciseSummaryStr = currentTasks.groupBy { if (it.exerciseId.isNotBlank()) it.exerciseId else it.title }
-                .map { (_, tasks) ->
-                    val first = tasks.first()
-                    val done = tasks.count { it.completed }
-                    "${first.title} (${tasks.size} ست - $done انجام شد)"
-                }.joinToString("، ")
-
-            val historyRecord = WeeklyHistoryEntity(
-                week = existingHistory.size + 1,
-                date = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date()),
-                weight = weight.toDoubleOrNull() ?: profile?.baseWeight?.toDoubleOrNull() ?: 0.0,
-                waist = waist.toDoubleOrNull() ?: profile?.baseWaist?.toDoubleOrNull() ?: 0.0,
-                sleep = sleep,
-                energy = energy,
-                rpe = rpe,
-                pain = pain.ifEmpty { "بدون درد" },
-                completedSets = doneCount,
-                totalSets = totalCount,
-                completionRate = if (totalCount > 0) ((doneCount.toDouble() / totalCount) * 100).toInt() else 100,
-                feedback = feedback.ifEmpty { "تمرینات هفته انجام شد" },
-                exerciseCount = currentTasks.groupBy { if (it.exerciseId.isNotBlank()) it.exerciseId else it.title }.size,
-                exerciseSummary = exerciseSummaryStr,
-                muscleSoreness = muscleSoreness,
-                jointPain = jointPain
-            )
-            dao.insertHistory(historyRecord)
-        }
-
         val historyList = dao.getHistory()
         val weekNumber = historyList.size + 1
+        val currentTasks = dao.getTasks()
 
         // 1. Details of the recent/current workout program and completed sets
         val currentWeekWorkoutText = if (currentTasks.isNotEmpty()) {

@@ -305,7 +305,7 @@ fun WeeklyReviewDialog(
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalArrangement = Arrangement.Center
                         ) {
                             Icon(Icons.Default.ContentCopy, contentDescription = "کپی", tint = MaterialTheme.colorScheme.onPrimaryContainer)
                             Spacer(modifier = Modifier.height(2.dp))
