@@ -36,7 +36,11 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import android.os.Build
+import coil.ImageLoader
 import coil.compose.AsyncImage
+import coil.decode.GifDecoder
+import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
 
 class ImageBridge(private val onImagePicked: (String) -> Unit) {
@@ -57,6 +61,17 @@ fun GoogleImageSearchDialog(
     onImageSelected: (imageUrl: String) -> Unit
 ) {
     val context = LocalContext.current
+    val animatedImageLoader = remember(context) {
+        ImageLoader.Builder(context)
+            .components {
+                if (Build.VERSION.SDK_INT >= 28) {
+                    add(ImageDecoderDecoder.Factory())
+                } else {
+                    add(GifDecoder.Factory())
+                }
+            }
+            .build()
+    }
     var selectedImageUrl by remember { mutableStateOf<String?>(null) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var isLoadingPage by remember { mutableStateOf(true) }
@@ -308,9 +323,10 @@ fun GoogleImageSearchDialog(
                                                 .data(currentSelected)
                                                 .crossfade(true)
                                                 .build(),
+                                            imageLoader = animatedImageLoader,
                                             contentDescription = "تصویر انتخابی",
                                             modifier = Modifier.fillMaxSize(),
-                                            contentScale = ContentScale.Crop
+                                            contentScale = ContentScale.Fit
                                         )
                                     }
 

@@ -64,8 +64,9 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
 
-    // Coil Async Image Loader for Compose
+    // Coil Async Image Loader for Compose & GIF Support
     implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation("io.coil-kt:coil-gif:2.5.0")
 
     // Room Database
     val roomVersion = "2.6.1"

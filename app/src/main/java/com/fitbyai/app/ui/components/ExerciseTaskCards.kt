@@ -1,5 +1,6 @@
 package com.fitbyai.app.ui.components
 
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,9 +20,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.ImageLoader
 import coil.compose.AsyncImage
+import coil.decode.GifDecoder
+import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
-import com.fitbyai.app.data.ExerciseImageHelper
 import com.fitbyai.app.data.WorkoutTaskEntity
 import com.fitbyai.app.ui.dialogs.GoogleImageSearchDialog
 
@@ -29,6 +32,22 @@ data class TaskGroup(
     val key: String,
     val tasks: List<WorkoutTaskEntity>
 )
+
+@Composable
+fun rememberAnimatedImageLoader(): ImageLoader {
+    val context = LocalContext.current
+    return remember(context) {
+        ImageLoader.Builder(context)
+            .components {
+                if (Build.VERSION.SDK_INT >= 28) {
+                    add(ImageDecoderDecoder.Factory())
+                } else {
+                    add(GifDecoder.Factory())
+                }
+            }
+            .build()
+    }
+}
 
 @Composable
 fun StackedExerciseTaskCard(
@@ -40,6 +59,7 @@ fun StackedExerciseTaskCard(
     val activeTask = taskGroup.tasks.firstOrNull() ?: return
     val remainingSetsCount = taskGroup.tasks.size
     val context = LocalContext.current
+    val animatedImageLoader = rememberAnimatedImageLoader()
     var showSearchDialog by remember { mutableStateOf(false) }
 
     val peekCount = (remainingSetsCount - 1).coerceAtMost(3)
@@ -224,54 +244,62 @@ fun StackedExerciseTaskCard(
                         }
                     }
 
-                    // Exercise Image Banner
-                    val exerciseImageUrl = remember(activeTask.images, activeTask.exerciseId, activeTask.title) {
-                        ExerciseImageHelper.getExerciseImageUrl(activeTask.exerciseId, activeTask.title, activeTask.images)
+                    // Only show image banner if user has explicitly selected an image
+                    val userSelectedImage = remember(activeTask.images) {
+                        activeTask.images.firstOrNull {
+                            it.isNotBlank() &&
+                                    it.startsWith("http") &&
+                                    !it.contains("example.com") &&
+                                    !it.contains("photo-example")
+                        }
                     }
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(160.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .clickable { showSearchDialog = true }
-                    ) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(exerciseImageUrl)
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = activeTask.title,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-
-                        // Top-Right Change Photo Badge
-                        Surface(
-                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
-                            shape = RoundedCornerShape(10.dp),
+                    if (userSelectedImage != null) {
+                        Box(
                             modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(10.dp)
+                                .fillMaxWidth()
+                                .heightIn(min = 180.dp, max = 340.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .clickable { showSearchDialog = true }
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(userSelectedImage)
+                                    .crossfade(true)
+                                    .build(),
+                                imageLoader = animatedImageLoader,
+                                contentDescription = activeTask.title,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Fit
+                            )
+
+                            // Top-Right Change Photo Badge
+                            Surface(
+                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(10.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Edit,
-                                    contentDescription = "تغییر عکس",
-                                    modifier = Modifier.size(14.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    text = "تغییر عکس",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = "تغییر عکس",
+                                        modifier = Modifier.size(14.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = "تغییر عکس",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             }
                         }
                     }
@@ -301,7 +329,7 @@ fun StackedExerciseTaskCard(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "جستجو و انتخاب عکس از گوگل",
+                            text = if (userSelectedImage != null) "تغییر / جستجوی عکس از گوگل" else "جستجو و انتخاب عکس از گوگل",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -364,6 +392,7 @@ fun SingleSetTaskCard(
     onUpdateImage: (exerciseId: String, title: String, imageUrl: String) -> Unit
 ) {
     val context = LocalContext.current
+    val animatedImageLoader = rememberAnimatedImageLoader()
     var showSearchDialog by remember { mutableStateOf(false) }
 
     if (showSearchDialog) {
@@ -462,54 +491,62 @@ fun SingleSetTaskCard(
                     }
                 }
 
-                // Exercise Image Banner
-                val exerciseImageUrl = remember(task.images, task.exerciseId, task.title) {
-                    ExerciseImageHelper.getExerciseImageUrl(task.exerciseId, task.title, task.images)
+                // Only show image banner if user has explicitly selected an image
+                val userSelectedImage = remember(task.images) {
+                    task.images.firstOrNull {
+                        it.isNotBlank() &&
+                                it.startsWith("http") &&
+                                !it.contains("example.com") &&
+                                !it.contains("photo-example")
+                    }
                 }
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(160.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .clickable { showSearchDialog = true }
-                ) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(exerciseImageUrl)
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = task.title,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-
-                    // Top-Right Change Photo Badge
-                    Surface(
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
-                        shape = RoundedCornerShape(10.dp),
+                if (userSelectedImage != null) {
+                    Box(
                         modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(10.dp)
+                            .fillMaxWidth()
+                            .heightIn(min = 180.dp, max = 340.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable { showSearchDialog = true }
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(userSelectedImage)
+                                .crossfade(true)
+                                .build(),
+                            imageLoader = animatedImageLoader,
+                            contentDescription = task.title,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Fit
+                        )
+
+                        // Top-Right Change Photo Badge
+                        Surface(
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(10.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Edit,
-                                contentDescription = "تغییر عکس",
-                                modifier = Modifier.size(14.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                text = "تغییر عکس",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "تغییر عکس",
+                                    modifier = Modifier.size(14.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = "تغییر عکس",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
                 }
@@ -539,7 +576,7 @@ fun SingleSetTaskCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "جستجو و انتخاب عکس از گوگل",
+                        text = if (userSelectedImage != null) "تغییر / جستجوی عکس از گوگل" else "جستجو و انتخاب عکس از گوگل",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold
                     )
