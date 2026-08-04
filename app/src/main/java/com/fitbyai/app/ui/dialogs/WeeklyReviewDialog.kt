@@ -21,6 +21,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -391,12 +394,25 @@ fun MetricInput(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     modifier: Modifier = Modifier
 ) {
+    var textFieldValueState by remember(value) {
+        mutableStateOf(TextFieldValue(text = value))
+    }
+
     OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
+        value = textFieldValueState,
+        onValueChange = { newValue ->
+            textFieldValueState = newValue
+            onValueChange(newValue.text)
+        },
         label = { Text(label, style = MaterialTheme.typography.labelSmall) },
         leadingIcon = { Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp)) },
-        modifier = modifier,
+        modifier = modifier.onFocusChanged { focusState ->
+            if (focusState.isFocused && textFieldValueState.text.isNotEmpty()) {
+                textFieldValueState = textFieldValueState.copy(
+                    selection = TextRange(0, textFieldValueState.text.length)
+                )
+            }
+        },
         singleLine = true,
         shape = RoundedCornerShape(14.dp),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),

@@ -14,8 +14,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.text.TextStyle
 import com.fitbyai.app.data.UserProfileEntity
 import com.fitbyai.app.data.ProfileHistoryEntity
 import com.fitbyai.app.data.getRelativeTimeSpanString
@@ -177,7 +182,7 @@ fun ProfileDialog(
                     }
 
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        OutlinedTextField(
+                        SelectAllOutlinedTextField(
                             value = height,
                             onValueChange = { height = it },
                             label = { Text("قد (cm)") },
@@ -187,7 +192,7 @@ fun ProfileDialog(
                             shape = RoundedCornerShape(16.dp),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                         )
-                        OutlinedTextField(
+                        SelectAllOutlinedTextField(
                             value = age,
                             onValueChange = { age = it },
                             label = { Text("سن") },
@@ -200,7 +205,7 @@ fun ProfileDialog(
                     }
 
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        OutlinedTextField(
+                        SelectAllOutlinedTextField(
                             value = baseWeight,
                             onValueChange = { baseWeight = it },
                             label = { Text("وزن فعلی (kg)") },
@@ -210,7 +215,7 @@ fun ProfileDialog(
                             shape = RoundedCornerShape(16.dp),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                         )
-                        OutlinedTextField(
+                        SelectAllOutlinedTextField(
                             value = targetWeight,
                             onValueChange = { targetWeight = it },
                             label = { Text("وزن هدف (kg)") },
@@ -223,7 +228,7 @@ fun ProfileDialog(
                     }
 
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        OutlinedTextField(
+                        SelectAllOutlinedTextField(
                             value = baseWaist,
                             onValueChange = { baseWaist = it },
                             label = { Text("دور کمر (cm)") },
@@ -233,7 +238,7 @@ fun ProfileDialog(
                             shape = RoundedCornerShape(16.dp),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                         )
-                        OutlinedTextField(
+                        SelectAllOutlinedTextField(
                             value = daysPerWeek,
                             onValueChange = { daysPerWeek = it },
                             label = { Text("روزهای تمرین در هفته") },
@@ -244,7 +249,7 @@ fun ProfileDialog(
                         )
                     }
 
-                    OutlinedTextField(
+                    SelectAllOutlinedTextField(
                         value = goal,
                         onValueChange = { goal = it },
                         label = { Text("هدف اصلی ورزشی") },
@@ -254,7 +259,7 @@ fun ProfileDialog(
                         singleLine = true
                     )
 
-                    OutlinedTextField(
+                    SelectAllOutlinedTextField(
                         value = experience,
                         onValueChange = { experience = it },
                         label = { Text("سابقه تمرین") },
@@ -264,28 +269,50 @@ fun ProfileDialog(
                         singleLine = true
                     )
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        OutlinedTextField(
-                            value = sessionDuration,
-                            onValueChange = { sessionDuration = it },
-                            label = { Text("زمان هر جلسه (دقیقه)") },
-                            leadingIcon = { Icon(Icons.Default.Timer, contentDescription = null) },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(16.dp),
-                            singleLine = true
+                    SelectAllOutlinedTextField(
+                        value = sessionDuration,
+                        onValueChange = { sessionDuration = it },
+                        label = { Text("زمان هر جلسه تمرین (دقیقه)") },
+                        leadingIcon = { Icon(Icons.Default.Timer, contentDescription = null) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        singleLine = true
+                    )
+
+                    // Daily Activity Level Selection Section (FilterChips)
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = "سطح فعالیت روزمره",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.SemiBold
                         )
-                        OutlinedTextField(
-                            value = activityLevel,
-                            onValueChange = { activityLevel = it },
-                            label = { Text("سطح فعالیت روزمره") },
-                            leadingIcon = { Icon(Icons.Default.DirectionsRun, contentDescription = null) },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(16.dp),
-                            singleLine = true
-                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            val options = listOf(
+                                "کم‌تحرک" to "کم‌تحرک (پشت‌میز نشینی)",
+                                "نیمه‌فعال" to "نیمه‌فعال (تحرک متوسط)",
+                                "پرتحرک" to "پرتحرک (فعالیت سنگین)"
+                            )
+                            options.forEach { (shortLabel, fullText) ->
+                                val isSelected = activityLevel == fullText || activityLevel.startsWith(shortLabel)
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = { activityLevel = fullText },
+                                    label = { Text(shortLabel, style = MaterialTheme.typography.labelSmall) },
+                                    leadingIcon = if (isSelected) {
+                                        { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp)) }
+                                    } else null,
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                            }
+                        }
                     }
 
-                    OutlinedTextField(
+                    SelectAllOutlinedTextField(
                         value = equipment,
                         onValueChange = { equipment = it },
                         label = { Text("تجهیزات در دسترس") },
@@ -294,7 +321,7 @@ fun ProfileDialog(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    OutlinedTextField(
+                    SelectAllOutlinedTextField(
                         value = limitations,
                         onValueChange = { limitations = it },
                         label = { Text("محدودیت‌ها و آسیب‌های قبلی") },
@@ -303,7 +330,7 @@ fun ProfileDialog(
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    OutlinedTextField(
+                    SelectAllOutlinedTextField(
                         value = healthConditions,
                         onValueChange = { healthConditions = it },
                         label = { Text("بیماری خاص یا داروهای مصرفی (در صورت وجود)") },
@@ -466,4 +493,42 @@ fun ProfileDialog(
             }
         }
     }
+}
+
+@Composable
+fun SelectAllOutlinedTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: @Composable (() -> Unit)? = null,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
+    singleLine: Boolean = true,
+    shape: Shape = RoundedCornerShape(16.dp),
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    textStyle: TextStyle = LocalTextStyle.current
+) {
+    var textFieldValueState by remember(value) {
+        mutableStateOf(TextFieldValue(text = value))
+    }
+
+    OutlinedTextField(
+        value = textFieldValueState,
+        onValueChange = { newValue ->
+            textFieldValueState = newValue
+            onValueChange(newValue.text)
+        },
+        label = label,
+        leadingIcon = leadingIcon,
+        modifier = modifier.onFocusChanged { focusState ->
+            if (focusState.isFocused && textFieldValueState.text.isNotEmpty()) {
+                textFieldValueState = textFieldValueState.copy(
+                    selection = TextRange(0, textFieldValueState.text.length)
+                )
+            }
+        },
+        singleLine = singleLine,
+        shape = shape,
+        keyboardOptions = keyboardOptions,
+        textStyle = textStyle
+    )
 }
