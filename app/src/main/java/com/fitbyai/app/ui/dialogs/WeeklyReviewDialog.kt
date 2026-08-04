@@ -119,7 +119,7 @@ fun WeeklyReviewDialog(
                     modifier = Modifier.padding(top = 2.dp)
                 ) {
                     Text(
-                        text = "بر اساس ",
+                        text = "بر اساس آخرین",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -260,7 +260,7 @@ fun WeeklyReviewDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("وارد کردن برنامه جدید (فرمت JSON)", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+                    Text("وارد کردن پاسخ هوش مصنوعی (فرمت JSON)", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
 
                     FilledTonalButton(
                         onClick = {
