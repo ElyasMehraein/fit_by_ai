@@ -622,119 +622,129 @@ fun SwipeableTaskCard(
     onDeleteTask: (taskId: String) -> Unit,
     content: @Composable () -> Unit
 ) {
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { dismissValue ->
-            when (dismissValue) {
-                SwipeToDismissBoxValue.EndToStart -> {
-                    // Physical Right Swipe (RTL End -> Start) -> Complete task
-                    onToggleStatus(task.taskId, task.completed)
-                    false
+    // Force LTR for the SwipeToDismissBox gesture engine so physical drag direction
+    // matches physical screen movement 1:1 without RTL inversion or sticking bugs.
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        val dismissState = rememberSwipeToDismissBoxState(
+            confirmValueChange = { dismissValue ->
+                when (dismissValue) {
+                    SwipeToDismissBoxValue.StartToEnd -> {
+                        // Physical Swipe Right (Left -> Right) -> Complete task
+                        onToggleStatus(task.taskId, task.completed)
+                        false
+                    }
+                    SwipeToDismissBoxValue.EndToStart -> {
+                        // Physical Swipe Left (Right -> Left) -> Delete task
+                        onDeleteTask(task.taskId)
+                        true
+                    }
+                    SwipeToDismissBoxValue.Settled -> false
                 }
-                SwipeToDismissBoxValue.StartToEnd -> {
-                    // Physical Left Swipe (RTL Start -> End) -> Delete task
-                    onDeleteTask(task.taskId)
-                    true
-                }
-                SwipeToDismissBoxValue.Settled -> false
             }
-        }
-    )
+        )
 
-    SwipeToDismissBox(
-        state = dismissState,
-        enableDismissFromStartToEnd = true,
-        enableDismissFromEndToStart = true,
-        backgroundContent = {
-            val direction = dismissState.dismissDirection
-            val isRightSwipeDone = direction == SwipeToDismissBoxValue.EndToStart
-            val isLeftSwipeDelete = direction == SwipeToDismissBoxValue.StartToEnd
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(
-                        when {
-                            isRightSwipeDone -> Brush.horizontalGradient(
-                                colors = listOf(Color(0xEE2E7D32), Color(0x994CAF50), Color(0x3381C784))
-                            )
-                            isLeftSwipeDelete -> Brush.horizontalGradient(
-                                colors = listOf(Color(0x33E57373), Color(0x99E53935), Color(0xEEC62828))
-                            )
-                            else -> Brush.horizontalGradient(colors = listOf(Color.Transparent, Color.Transparent))
-                        }
-                    )
-            )
-        },
-        content = {
-            Box(modifier = Modifier.fillMaxWidth()) {
-                content()
-
+        SwipeToDismissBox(
+            state = dismissState,
+            enableDismissFromStartToEnd = true,
+            enableDismissFromEndToStart = true,
+            backgroundContent = {
                 val direction = dismissState.dismissDirection
-                val isRightSwipeDone = direction == SwipeToDismissBoxValue.EndToStart
-                val isLeftSwipeDelete = direction == SwipeToDismissBoxValue.StartToEnd
+                val isRightSwipeDone = direction == SwipeToDismissBoxValue.StartToEnd
+                val isLeftSwipeDelete = direction == SwipeToDismissBoxValue.EndToStart
 
-                if (isRightSwipeDone || isLeftSwipeDelete) {
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(
-                                if (isRightSwipeDone) {
-                                    Brush.horizontalGradient(
-                                        colors = listOf(Color(0xDD1B5E20), Color(0xEE2E7D32), Color(0x884CAF50))
-                                    )
-                                } else {
-                                    Brush.horizontalGradient(
-                                        colors = listOf(Color(0x88EF5350), Color(0xEEC62828), Color(0xDD8E0000))
-                                    )
-                                }
-                            )
-                            .padding(horizontal = 24.dp),
-                        contentAlignment = if (isRightSwipeDone) Alignment.CenterEnd else Alignment.CenterStart
-                    ) {
-                        if (isRightSwipeDone) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.CheckCircle,
-                                    contentDescription = "انجام شد",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(32.dp)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(
+                            when {
+                                isRightSwipeDone -> Brush.horizontalGradient(
+                                    colors = listOf(Color(0xEE2E7D32), Color(0x994CAF50), Color(0x3381C784))
                                 )
-                                Text(
-                                    text = "انجام شد",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = Color.White
+                                isLeftSwipeDelete -> Brush.horizontalGradient(
+                                    colors = listOf(Color(0x33E57373), Color(0x99E53935), Color(0xEEC62828))
                                 )
+                                else -> Brush.horizontalGradient(colors = listOf(Color.Transparent, Color.Transparent))
                             }
-                        } else {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(
-                                    text = "حذف",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = Color.White
+                        )
+                )
+            },
+            content = {
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                        content()
+                    }
+
+                    val direction = dismissState.dismissDirection
+                    val isRightSwipeDone = direction == SwipeToDismissBoxValue.StartToEnd
+                    val isLeftSwipeDelete = direction == SwipeToDismissBoxValue.EndToStart
+
+                    if (isRightSwipeDone || isLeftSwipeDelete) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(
+                                    if (isRightSwipeDone) {
+                                        Brush.horizontalGradient(
+                                            colors = listOf(Color(0xDD1B5E20), Color(0xEE2E7D32), Color(0x884CAF50))
+                                        )
+                                    } else {
+                                        Brush.horizontalGradient(
+                                            colors = listOf(Color(0x88EF5350), Color(0xEEC62828), Color(0xDD8E0000))
+                                        )
+                                    }
                                 )
-                                Icon(
-                                    Icons.Default.Delete,
-                                    contentDescription = "حذف",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(32.dp)
-                                )
+                                .padding(horizontal = 24.dp),
+                            contentAlignment = if (isRightSwipeDone) Alignment.CenterStart else Alignment.CenterEnd
+                        ) {
+                            if (isRightSwipeDone) {
+                                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.CheckCircle,
+                                            contentDescription = "انجام شد",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                        Text(
+                                            text = "انجام شد",
+                                            style = MaterialTheme.typography.titleLarge,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = Color.White
+                                        )
+                                    }
+                                }
+                            } else {
+                                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            text = "حذف",
+                                            style = MaterialTheme.typography.titleLarge,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = Color.White
+                                        )
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = "حذف",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
-        }
-    )
+        )
+    }
 }
 
 @Composable
