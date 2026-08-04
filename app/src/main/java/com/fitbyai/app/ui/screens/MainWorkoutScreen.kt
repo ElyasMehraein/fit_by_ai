@@ -41,7 +41,7 @@ import com.fitbyai.app.R
 import com.fitbyai.app.data.WorkoutTaskEntity
 import com.fitbyai.app.ui.WorkoutUiState
 import com.fitbyai.app.ui.WorkoutViewModel
-import com.fitbyai.app.ui.dialogs.HistoryDialog
+import com.fitbyai.app.ui.dialogs.ManualProgramDialog
 import com.fitbyai.app.ui.dialogs.ProfileDialog
 import kotlinx.coroutines.launch
 import com.fitbyai.app.ui.dialogs.WeeklyReviewDialog
@@ -53,7 +53,7 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
 
     var showProfileDialog by remember { mutableStateOf(false) }
     var showReviewDialog by remember { mutableStateOf(false) }
-    var showHistoryDialog by remember { mutableStateOf(false) }
+    var showManualProgramDialog by remember { mutableStateOf(false) }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Scaffold(
@@ -115,9 +115,9 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
                 )
                 NavigationBarItem(
                     selected = false,
-                    onClick = { showHistoryDialog = true },
-                    icon = { Icon(Icons.Default.ShowChart, contentDescription = null) },
-                    label = { Text("تاریخچه", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold) }
+                    onClick = { showManualProgramDialog = true },
+                    icon = { Icon(Icons.Default.EditNote, contentDescription = null) },
+                    label = { Text("برنامه دستی", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold) }
                 )
                 NavigationBarItem(
                     selected = false,
@@ -247,10 +247,14 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
     if (showProfileDialog) {
         ProfileDialog(
             currentProfile = uiState.userProfile,
-            profileHistory = uiState.profileHistory,
+            weeklyHistory = uiState.history,
             onDismiss = { showProfileDialog = false },
             onSave = { h, a, g, goal, bw, bwa, exp, days, eq, lim, tw, dur, act, hc ->
                 viewModel.saveProfile(h, a, g, goal, bw, bwa, exp, days, eq, lim, tw, dur, act, hc)
+            },
+            onResetData = {
+                viewModel.resetAllData()
+                showProfileDialog = false
             }
         )
     }
@@ -290,13 +294,17 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
         )
     }
 
-    if (showHistoryDialog) {
-        HistoryDialog(
-            historyList = uiState.history,
-            onDismiss = { showHistoryDialog = false },
-            onResetData = {
-                viewModel.resetAllData()
-                showHistoryDialog = false
+    if (showManualProgramDialog) {
+        val lastWeight = uiState.history.lastOrNull()?.weight?.toString() ?: uiState.userProfile?.baseWeight ?: ""
+        val lastWaist = uiState.history.lastOrNull()?.waist?.toString() ?: uiState.userProfile?.baseWaist ?: ""
+        ManualProgramDialog(
+            initialWeight = lastWeight,
+            initialWaist = lastWaist,
+            onDismiss = { showManualProgramDialog = false },
+            onSaveProgram = { raw, w, wa, s, e, rpe, pain, fb ->
+                viewModel.importProgram(raw, w, wa, s, e, rpe, pain, fb) {
+                    showManualProgramDialog = false
+                }
             }
         )
     }

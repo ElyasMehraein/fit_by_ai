@@ -21,23 +21,24 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import com.fitbyai.app.data.UserProfileEntity
-import com.fitbyai.app.data.ProfileHistoryEntity
-import com.fitbyai.app.data.getRelativeTimeSpanString
+import com.fitbyai.app.data.WeeklyHistoryEntity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileDialog(
     currentProfile: UserProfileEntity?,
-    profileHistory: List<ProfileHistoryEntity> = emptyList(),
+    weeklyHistory: List<WeeklyHistoryEntity> = emptyList(),
     onDismiss: () -> Unit,
     onSave: (
         height: String, age: String, gender: String, goal: String,
         baseWeight: String, baseWaist: String, experience: String,
         daysPerWeek: String, equipment: String, limitations: String,
         targetWeight: String, sessionDuration: String, activityLevel: String, healthConditions: String
-    ) -> Unit
+    ) -> Unit,
+    onResetData: () -> Unit = {}
 ) {
     var height by remember { mutableStateOf(currentProfile?.height ?: "") }
     var age by remember { mutableStateOf(currentProfile?.age ?: "") }
@@ -66,7 +67,7 @@ fun ProfileDialog(
     var activityLevel by remember { mutableStateOf(currentProfile?.activityLevel ?: "کم‌تحرک (کارمندی)") }
     var healthConditions by remember { mutableStateOf(currentProfile?.healthConditions ?: "") }
 
-    var selectedTab by remember { mutableStateOf(0) } // 0: Form, 1: History
+    var selectedTab by remember { mutableStateOf(0) } // 0: Specs Form, 1: Progress History, 2: Settings & Reset
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -120,32 +121,47 @@ fun ProfileDialog(
                         indicator = {},
                         divider = {}
                     ) {
-                    Tab(
-                        selected = selectedTab == 0,
-                        onClick = { selectedTab = 0 },
-                        text = {
-                            Text(
-                                "مشخصات و فرم",
-                                fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal
-                            )
-                        },
-                        icon = { Icon(Icons.Default.EditNote, contentDescription = null) }
-                    )
-                    Tab(
-                        selected = selectedTab == 1,
-                        onClick = { selectedTab = 1 },
-                        text = {
-                            Text(
-                                "تاریخچه مشخصات (${profileHistory.size})",
-                                fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal
-                            )
-                        },
-                        icon = { Icon(Icons.Default.History, contentDescription = null) }
-                    )
+                        Tab(
+                            selected = selectedTab == 0,
+                            onClick = { selectedTab = 0 },
+                            text = {
+                                Text(
+                                    "مشخصات و فرم",
+                                    fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            },
+                            icon = { Icon(Icons.Default.EditNote, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                        )
+                        Tab(
+                            selected = selectedTab == 1,
+                            onClick = { selectedTab = 1 },
+                            text = {
+                                Text(
+                                    "پیشرفت تمرینی",
+                                    fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            },
+                            icon = { Icon(Icons.Default.ShowChart, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                        )
+                        Tab(
+                            selected = selectedTab == 2,
+                            onClick = { selectedTab = 2 },
+                            text = {
+                                Text(
+                                    "تنظیمات و مدیریت",
+                                    fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Normal,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            },
+                            icon = { Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                        )
+                    }
                 }
-            }
 
                 if (selectedTab == 0) {
+                    // TAB 0: Profile Specifications Form
                     Surface(
                         color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f),
                         shape = RoundedCornerShape(16.dp),
@@ -297,7 +313,6 @@ fun ProfileDialog(
                         )
                     }
 
-                    // Daily Activity Level Selection Section (FilterChips)
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
                             text = "سطح فعالیت روزمره",
@@ -382,127 +397,198 @@ fun ProfileDialog(
                             fontWeight = FontWeight.Bold
                         )
                     }
-                } else {
-                    // History Tab
-                    if (profileHistory.isEmpty()) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier.fillMaxWidth()
+                } else if (selectedTab == 1) {
+                    // TAB 1: Workout Progress History (Moved from HistoryDialog)
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Column(
-                                modifier = Modifier.padding(24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.History,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(36.dp)
-                                )
-                                Text(
-                                    text = "هنوز تاریخچه‌ای ثبت نشده است.",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "با هر بار ویرایش و تغییر مشخصات پروفایل، نسخه قبلی آن همراه با زمان ثبت ذخیره خواهد شد.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    } else {
-                        Text(
-                            text = "نسخه‌های قبلی پروفایل شما:",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
-                        )
-                        profileHistory.forEach { item ->
-                            val relativeTimeStr = getRelativeTimeSpanString(item.timestamp)
-                            OutlinedCard(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = CardDefaults.outlinedCardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                                )
+                            Surface(
+                                modifier = Modifier.weight(1f),
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                shape = RoundedCornerShape(20.dp)
                             ) {
                                 Column(
                                     modifier = Modifier.padding(16.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text("کل هفته‌ها", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text("${weeklyHistory.size} هفته", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                                }
+                            }
+                            Surface(
+                                modifier = Modifier.weight(1f),
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                shape = RoundedCornerShape(20.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text("آخرین ثبت وزن", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f))
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    val lastW = if (weeklyHistory.isNotEmpty()) "${weeklyHistory.last().weight} kg" else "-"
+                                    Text(lastW, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                                }
+                            }
+                        }
+
+                        if (weeklyHistory.isEmpty()) {
+                            Surface(
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.4f),
+                                shape = RoundedCornerShape(20.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(32.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
+                                    Icon(Icons.Default.History, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(48.dp))
+                                    Text(
+                                        text = "هنوز تاریخچه پیشرفتی ثبت نشده است",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = "پس از پایان اولین هفته، روند پیشرفت فیزیکی و تمرینی شما در این بخش نمایش داده خواهد شد.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                        } else {
+                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                weeklyHistory.forEachIndexed { index, item ->
+                                    val prevItem = if (index > 0) weeklyHistory[index - 1] else null
+                                    val weightDelta = if (prevItem != null) item.weight - prevItem.weight else null
+                                    val waistDelta = if (prevItem != null) item.waist - prevItem.waist else null
+
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                        shape = RoundedCornerShape(20.dp),
+                                        modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        Surface(
-                                            color = MaterialTheme.colorScheme.primaryContainer,
-                                            shape = RoundedCornerShape(8.dp)
+                                        Column(
+                                            modifier = Modifier.padding(16.dp),
+                                            verticalArrangement = Arrangement.spacedBy(10.dp)
                                         ) {
                                             Row(
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                Icon(
-                                                    Icons.Default.Schedule,
-                                                    contentDescription = null,
-                                                    modifier = Modifier.size(14.dp),
-                                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                                )
-                                                Text(
-                                                    text = relativeTimeStr,
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                                )
+                                                Surface(
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    shape = RoundedCornerShape(10.dp)
+                                                ) {
+                                                    Text(
+                                                        "هفته ${item.week}",
+                                                        style = MaterialTheme.typography.labelMedium,
+                                                        color = MaterialTheme.colorScheme.onPrimary,
+                                                        fontWeight = FontWeight.Bold,
+                                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                                    )
+                                                }
+                                                Text(item.date, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            }
+
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Column {
+                                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                        Text("وزن: ${item.weight} kg", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                                        if (weightDelta != null && weightDelta != 0.0) {
+                                                            val deltaText = if (weightDelta > 0) "+${String.format("%.1f", weightDelta)}" else String.format("%.1f", weightDelta)
+                                                            Surface(
+                                                                color = if (weightDelta < 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.errorContainer,
+                                                                shape = RoundedCornerShape(6.dp)
+                                                            ) {
+                                                                Text(
+                                                                    deltaText,
+                                                                    style = MaterialTheme.typography.labelSmall,
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    color = if (weightDelta < 0) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onErrorContainer,
+                                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                    Spacer(modifier = Modifier.height(2.dp))
+                                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                        Text("شکم: ${item.waist} cm", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                        if (waistDelta != null && waistDelta != 0.0) {
+                                                            val waistText = if (waistDelta > 0) "+${String.format("%.1f", waistDelta)}" else String.format("%.1f", waistDelta)
+                                                            Text("($waistText)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                                                        }
+                                                    }
+                                                    if (item.jointPain.isNotBlank() && item.jointPain != "بدون درد مفصلی") {
+                                                        Spacer(modifier = Modifier.height(2.dp))
+                                                        Text("درد مفصلی: ${item.jointPain}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                                                    }
+                                                    if (item.muscleSoreness.isNotBlank() && item.muscleSoreness != "بدون کوفتگی") {
+                                                        Spacer(modifier = Modifier.height(2.dp))
+                                                        Text("کوفتگی: ${item.muscleSoreness}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
+                                                    }
+                                                }
+                                                Text("${item.completionRate}% انجام", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                                             }
                                         }
-                                        Text(
-                                            text = "جنسیت: ${item.gender.ifEmpty { "مرد" }}",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.secondary,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
                                     }
-
-                                    Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // TAB 2: Settings & Data Reset Management
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(20.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Icon(Icons.Default.Storage, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                                     Text(
-                                        text = "قد: ${item.height.ifEmpty { "-" }} سانتی‌متر | سن: ${item.age.ifEmpty { "-" }} | وزن: ${item.baseWeight.ifEmpty { "-" }} کیلوگرم | دور شکم: ${item.baseWaist.ifEmpty { "-" }} سانتی‌متر",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface
+                                        text = "مدیریت داده‌های اپلیکیشن",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
                                     )
-                                    if (item.targetWeight.isNotEmpty()) {
-                                        Text(
-                                            text = "وزن هدف: ${item.targetWeight} کیلوگرم",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    Text(
-                                        text = "هدف: ${item.goal} | سابقه: ${item.experience}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    if (item.equipment.isNotEmpty()) {
-                                        Text(
-                                            text = "تجهیزات: ${item.equipment}",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    if (item.limitations.isNotEmpty()) {
-                                        Text(
-                                            text = "محدودیت‌ها: ${item.limitations}",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
+                                }
+                                Text(
+                                    text = "در صورت تغییر برنامه یا پاکسازی کامل داده‌های برنامه تمرینی فعلی و تاریخچه‌ها می‌توانید از دکمه زیر استفاده کنید.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+
+                                OutlinedButton(
+                                    onClick = {
+                                        onResetData()
+                                        onDismiss()
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(48.dp),
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                                ) {
+                                    Icon(Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("پاکسازی و ریست کامل تمامی تمرین‌ها و تاریخچه‌ها", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
