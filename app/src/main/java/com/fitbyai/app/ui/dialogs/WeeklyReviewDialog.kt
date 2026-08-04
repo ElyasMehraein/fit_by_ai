@@ -164,7 +164,7 @@ fun WeeklyReviewDialog(
                         }
                         Slider(
                             value = sleepHours,
-                            onValueChange = { sleepHours = it },
+                            onValueChange = { sleepHours = kotlin.math.round(it * 2f) / 2f },
                             valueRange = 4f..12f,
                             steps = 15,
                             colors = SliderDefaults.colors(
@@ -196,7 +196,7 @@ fun WeeklyReviewDialog(
                         }
                         Slider(
                             value = rpe,
-                            onValueChange = { rpe = it },
+                            onValueChange = { rpe = kotlin.math.round(it) },
                             valueRange = 1f..10f,
                             steps = 8,
                             colors = SliderDefaults.colors(
@@ -357,40 +357,23 @@ fun WeeklyReviewDialog(
                 ) {
                     Text("وارد کردن پاسخ هوش مصنوعی (فرمت JSON)", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        if (jsonInput.isNotEmpty()) {
-                            OutlinedButton(
-                                onClick = {
-                                    jsonInput = ""
-                                    jsonTextFieldState = TextFieldValue("")
-                                },
-                                shape = RoundedCornerShape(12.dp),
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                            ) {
-                                Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(15.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("پاک کردن", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                    FilledTonalButton(
+                        onClick = {
+                            val clipText = composeClipboardManager.getText()?.text
+                            if (!clipText.isNullOrBlank()) {
+                                jsonInput = clipText
+                                jsonTextFieldState = TextFieldValue(text = clipText, selection = TextRange(clipText.length))
+                                Toast.makeText(context, "متن از حافظه چسبانده شد ✅", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "حافظه موقت (Clipboard) خالی است", Toast.LENGTH_SHORT).show()
                             }
-                        }
-                        FilledTonalButton(
-                            onClick = {
-                                val clipText = composeClipboardManager.getText()?.text
-                                if (!clipText.isNullOrBlank()) {
-                                    jsonInput = clipText
-                                    jsonTextFieldState = TextFieldValue(text = clipText, selection = TextRange(clipText.length))
-                                    Toast.makeText(context, "متن از حافظه چسبانده شد ✅", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Toast.makeText(context, "حافظه موقت (Clipboard) خالی است", Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            shape = RoundedCornerShape(12.dp),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
-                        ) {
-                            Icon(Icons.Default.ContentPaste, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("چسباندن", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                        }
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Icon(Icons.Default.ContentPaste, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("چسباندن", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                     }
                 }
 
