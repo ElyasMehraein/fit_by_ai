@@ -43,6 +43,7 @@ import com.fitbyai.app.ui.WorkoutUiState
 import com.fitbyai.app.ui.WorkoutViewModel
 import com.fitbyai.app.ui.dialogs.HistoryDialog
 import com.fitbyai.app.ui.dialogs.ProfileDialog
+import kotlinx.coroutines.launch
 import com.fitbyai.app.ui.dialogs.WeeklyReviewDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -207,6 +208,9 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
                                     task = group.tasks.first(),
                                     onToggleStatus = { taskId, currentStatus ->
                                         viewModel.toggleTaskCompletion(taskId, currentStatus)
+                                    },
+                                    onDeleteTask = { taskId ->
+                                        viewModel.deleteTask(taskId)
                                     }
                                 )
                             } else {
@@ -214,6 +218,9 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
                                     taskGroup = group,
                                     onToggleStatus = { taskId, currentStatus ->
                                         viewModel.toggleTaskCompletion(taskId, currentStatus)
+                                    },
+                                    onDeleteTask = { taskId ->
+                                        viewModel.deleteTask(taskId)
                                     }
                                 )
                             }
@@ -224,6 +231,9 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
                                 task = task,
                                 onToggleStatus = { taskId, currentStatus ->
                                     viewModel.toggleTaskCompletion(taskId, currentStatus)
+                                },
+                                onDeleteTask = { taskId ->
+                                    viewModel.deleteTask(taskId)
                                 }
                             )
                         }
@@ -596,35 +606,132 @@ data class TaskGroup(
     val tasks: List<WorkoutTaskEntity>
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SwipeableTaskCard(
+    task: WorkoutTaskEntity,
+    onToggleStatus: (taskId: String, currentStatus: Boolean) -> Unit,
+    onDeleteTask: (taskId: String) -> Unit,
+    content: @Composable () -> Unit
+) {
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { dismissValue ->
+            when (dismissValue) {
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    // Swiped Right (RTL: Start -> End) -> Complete task
+                    onToggleStatus(task.taskId, task.completed)
+                    false
+                }
+                SwipeToDismissBoxValue.EndToStart -> {
+                    // Swiped Left (RTL: End -> Start) -> Delete task
+                    onDeleteTask(task.taskId)
+                    true
+                }
+                SwipeToDismissBoxValue.Settled -> false
+            }
+        }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        enableDismissFromStartToEnd = true,
+        enableDismissFromEndToStart = true,
+        backgroundContent = {
+            val direction = dismissState.dismissDirection
+            val isCompleteAction = direction == SwipeToDismissBoxValue.StartToEnd
+            val isDeleteAction = direction == SwipeToDismissBoxValue.EndToStart
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(
+                        when {
+                            isCompleteAction -> Brush.horizontalGradient(
+                                colors = listOf(Color(0x334CAF50), Color(0xEE2E7D32))
+                            )
+                            isDeleteAction -> Brush.horizontalGradient(
+                                colors = listOf(Color(0xEEC62828), Color(0x33EF5350))
+                            )
+                            else -> Brush.horizontalGradient(colors = listOf(Color.Transparent, Color.Transparent))
+                        }
+                    )
+                    .padding(horizontal = 20.dp),
+                contentAlignment = if (isCompleteAction) Alignment.CenterStart else Alignment.CenterEnd
+            ) {
+                if (isCompleteAction) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = "انجام شد",
+                            tint = Color.White,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Text(
+                            text = "انجام شد",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                } else if (isDeleteAction) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "حذف",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "حذف",
+                            tint = Color.White,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
+            }
+        },
+        content = {
+            content()
+        }
+    )
+}
+
 @Composable
 fun StackedExerciseTaskCard(
     taskGroup: TaskGroup,
-    onToggleStatus: (taskId: String, currentStatus: Boolean) -> Unit
+    onToggleStatus: (taskId: String, currentStatus: Boolean) -> Unit,
+    onDeleteTask: (taskId: String) -> Unit
 ) {
-    val activeTask = taskGroup.tasks.first()
-    val totalRemainingSets = taskGroup.tasks.size
+    val activeTask = taskGroup.tasks.firstOrNull() ?: return
+    val remainingSetsCount = taskGroup.tasks.size
     val context = LocalContext.current
 
-    val peekingCount = (totalRemainingSets - 1).coerceAtMost(2)
+    val peekCount = (remainingSetsCount - 1).coerceAtMost(3)
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = (peekingCount * 6).dp, start = (peekingCount * 8).dp)
+            .padding(top = (peekCount * 5).dp, start = (peekCount * 6).dp)
     ) {
-        // Render peeking background card layers behind the front card (using same card color as top card)
-        for (i in peekingCount downTo 1) {
-            val offsetX = (-8 * i).dp
-            val offsetY = (-6 * i).dp
+        // Physical Deck Card Layers stacked behind active top card
+        for (i in peekCount downTo 1) {
+            val offsetX = (-6 * i).dp
+            val offsetY = (-5 * i).dp
 
             Card(
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                 ),
-                border = BorderStroke(
-                    1.dp,
-                    MaterialTheme.colorScheme.outlineVariant
-                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
                 elevation = CardDefaults.cardElevation(defaultElevation = (2 - i).dp),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -633,36 +740,267 @@ fun StackedExerciseTaskCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.Start,
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "ست بعدی (${activeTask.setNumber + i})",
+                        text = "ست ${activeTask.setNumber + i} از ${activeTask.totalSets}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                         fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "در لایه زیرین",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )
                 }
                 Spacer(modifier = Modifier.height(130.dp))
             }
         }
 
-        // Top Front Card
+        // Active Top Front Card
+        SwipeableTaskCard(
+            task = activeTask,
+            onToggleStatus = onToggleStatus,
+            onDeleteTask = onDeleteTask
+        ) {
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (activeTask.completed) MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.surface
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    // Header with exercise title and remaining set badges
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = activeTask.title,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textDecoration = if (activeTask.completed) TextDecoration.LineThrough else TextDecoration.None,
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Layers,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(14.dp),
+                                            tint = MaterialTheme.colorScheme.onTertiaryContainer
+                                        )
+                                        Text(
+                                            text = "$remainingSetsCount ست در صف",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                                        )
+                                    }
+                                }
+
+                                Surface(
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Text(
+                                        text = "ست ${activeTask.setNumber} از ${activeTask.totalSets}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        if (activeTask.targetPerSet.isNotBlank() || activeTask.targetMuscle.isNotBlank() || activeTask.movementPattern.isNotBlank()) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (activeTask.targetMuscle.isNotBlank()) {
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.secondaryContainer,
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Text(
+                                            text = "عضله: ${activeTask.targetMuscle}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        )
+                                    }
+                                }
+                                if (activeTask.movementPattern.isNotBlank()) {
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.tertiaryContainer,
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Text(
+                                            text = "الگو: ${activeTask.movementPattern}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        )
+                                    }
+                                }
+                                if (activeTask.targetPerSet.isNotBlank()) {
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                        shape = RoundedCornerShape(8.dp)
+                                    ) {
+                                        Text(
+                                            text = "هدف: ${activeTask.targetPerSet}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (activeTask.description.isNotBlank()) {
+                        Text(
+                            text = activeTask.description,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            lineHeight = 20.sp
+                        )
+                    }
+
+                    // Search Images Button
+                    OutlinedButton(
+                        onClick = {
+                            val searchQuery = Uri.encode("حرکت ورزشی ${activeTask.title}")
+                            val intent = Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse("https://www.google.com/search?q=$searchQuery&tbm=isch")
+                            )
+                            context.startActivity(intent)
+                        },
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "جستجوی تصاویر گوگل",
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "مشاهده تصاویر حرکت در گوگل",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    // Action Buttons Row: Delete and Complete Set
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedButton(
+                            onClick = { onDeleteTask(activeTask.taskId) },
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            ),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "حذف ست",
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        Button(
+                            onClick = { onToggleStatus(activeTask.taskId, activeTask.completed) },
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (activeTask.completed) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
+                                contentColor = if (activeTask.completed) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onPrimary
+                            )
+                        ) {
+                            Icon(
+                                imageVector = if (activeTask.completed) Icons.Default.CheckCircle else Icons.Default.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (activeTask.completed) "انجام شد (تغییر وضعیت)" else if (activeTask.setNumber == activeTask.totalSets) "انجام آخرین ست" else "تکمیل ست ${activeTask.setNumber}",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SingleSetTaskCard(
+    task: WorkoutTaskEntity,
+    onToggleStatus: (taskId: String, currentStatus: Boolean) -> Unit,
+    onDeleteTask: (taskId: String) -> Unit
+) {
+    val context = LocalContext.current
+
+    SwipeableTaskCard(
+        task = task,
+        onToggleStatus = onToggleStatus,
+        onDeleteTask = onDeleteTask
+    ) {
         Card(
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
+                containerColor = if (task.completed) MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.surface
             ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
+            elevation = CardDefaults.cardElevation(defaultElevation = if (task.completed) 1.dp else 3.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
             Column(
                 modifier = Modifier.padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Exercise Title & Stacked Set Badges Header
+                // Exercise Title & Set Badge Header
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -670,67 +1008,42 @@ fun StackedExerciseTaskCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = activeTask.title,
+                            text = task.title,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
+                            textDecoration = if (task.completed) TextDecoration.LineThrough else TextDecoration.None,
                             modifier = Modifier.weight(1f)
                         )
 
                         Spacer(modifier = Modifier.width(8.dp))
 
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Surface(
-                                color = MaterialTheme.colorScheme.tertiaryContainer,
-                                shape = RoundedCornerShape(10.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.Layers,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(14.dp),
-                                        tint = MaterialTheme.colorScheme.onTertiaryContainer
-                                    )
-                                    Text(
-                                        text = "$totalRemainingSets ست در صف",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onTertiaryContainer
-                                    )
-                                }
-                            }
-
-                            Surface(
-                                color = MaterialTheme.colorScheme.primaryContainer,
-                                shape = RoundedCornerShape(10.dp)
-                            ) {
-                                Text(
-                                    text = "ست ${activeTask.setNumber} از ${activeTask.totalSets}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                )
-                            }
+                        Surface(
+                            color = if (task.completed) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.primaryContainer,
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text(
+                                text = "ست ${task.setNumber} از ${task.totalSets}",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = if (task.completed) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
                         }
                     }
 
-                    if (activeTask.targetPerSet.isNotBlank() || activeTask.targetMuscle.isNotBlank() || activeTask.movementPattern.isNotBlank()) {
+                    if (task.targetPerSet.isNotBlank() || task.targetMuscle.isNotBlank() || task.movementPattern.isNotBlank()) {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            if (activeTask.targetMuscle.isNotBlank()) {
+                            if (task.targetMuscle.isNotBlank()) {
                                 Surface(
                                     color = MaterialTheme.colorScheme.secondaryContainer,
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Text(
-                                        text = "عضله: ${activeTask.targetMuscle}",
+                                        text = "عضله: ${task.targetMuscle}",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -738,13 +1051,13 @@ fun StackedExerciseTaskCard(
                                     )
                                 }
                             }
-                            if (activeTask.movementPattern.isNotBlank()) {
+                            if (task.movementPattern.isNotBlank()) {
                                 Surface(
                                     color = MaterialTheme.colorScheme.tertiaryContainer,
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Text(
-                                        text = "الگو: ${activeTask.movementPattern}",
+                                        text = "الگو: ${task.movementPattern}",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onTertiaryContainer,
@@ -752,13 +1065,13 @@ fun StackedExerciseTaskCard(
                                     )
                                 }
                             }
-                            if (activeTask.targetPerSet.isNotBlank()) {
+                            if (task.targetPerSet.isNotBlank()) {
                                 Surface(
                                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Text(
-                                        text = "هدف هر ست: ${activeTask.targetPerSet}",
+                                        text = "هدف: ${task.targetPerSet}",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.primary,
@@ -770,9 +1083,9 @@ fun StackedExerciseTaskCard(
                     }
                 }
 
-                if (activeTask.description.isNotBlank()) {
+                if (task.description.isNotBlank()) {
                     Text(
-                        text = activeTask.description,
+                        text = task.description,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         lineHeight = 20.sp
@@ -782,7 +1095,7 @@ fun StackedExerciseTaskCard(
                 // Search Images Button
                 OutlinedButton(
                     onClick = {
-                        val searchQuery = Uri.encode("حرکت ورزشی ${activeTask.title}")
+                        val searchQuery = Uri.encode("حرکت ورزشی ${task.title}")
                         val intent = Intent(
                             Intent.ACTION_VIEW,
                             Uri.parse("https://www.google.com/search?q=$searchQuery&tbm=isch")
@@ -808,181 +1121,48 @@ fun StackedExerciseTaskCard(
                     )
                 }
 
-                // Action Button: Complete Set (Full Width)
-                Button(
-                    onClick = { onToggleStatus(activeTask.taskId, activeTask.completed) },
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    )
-                ) {
-                    Icon(
-                        Icons.Default.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = if (activeTask.setNumber == activeTask.totalSets) "انجام آخرین ست" else "تکمیل ست ${activeTask.setNumber}",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun SingleSetTaskCard(
-    task: WorkoutTaskEntity,
-    onToggleStatus: (taskId: String, currentStatus: Boolean) -> Unit
-) {
-    val context = LocalContext.current
-
-    Card(
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (task.completed) MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (task.completed) 1.dp else 3.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            // Exercise Title & Set Badge Header
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                // Action Buttons Row: Delete and Complete / Restore
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = task.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        textDecoration = if (task.completed) TextDecoration.LineThrough else TextDecoration.None,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Surface(
-                        color = if (task.completed) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.primaryContainer,
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Text(
-                            text = "ست ${task.setNumber} از ${task.totalSets}",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = if (task.completed) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-
-                if (task.targetPerSet.isNotBlank()) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(
-                            text = "هدف هر ست: ${task.targetPerSet}",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-            }
-
-            if (task.description.isNotBlank()) {
-                Text(
-                    text = task.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = 20.sp
-                )
-            }
-
-            // "تصاویر بیشتر (در گوگل)" Search Button
-            OutlinedButton(
-                onClick = {
-                    val searchQuery = Uri.encode("حرکت ورزشی ${task.title}")
-                    val intent = Intent(
-                        Intent.ACTION_VIEW,
-                        Uri.parse("https://www.google.com/search?q=$searchQuery&tbm=isch")
-                    )
-                    context.startActivity(intent)
-                },
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.primary
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = "جستجوی تصاویر گوگل",
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "مشاهده تصاویر حرکت در گوگل",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            if (!task.completed) {
-                Button(
-                    onClick = { onToggleStatus(task.taskId, task.completed) },
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    )
-                ) {
-                    Icon(
-                        Icons.Default.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "انجام آخرین ست",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     OutlinedButton(
-                        onClick = { onToggleStatus(task.taskId, task.completed) },
+                        onClick = { onDeleteTask(task.taskId) },
                         shape = RoundedCornerShape(14.dp),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        ),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
                     ) {
-                        Icon(Icons.Default.Undo, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("بازگردانی به صف", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Medium)
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "حذف ست",
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
 
-                    Text(
-                        text = task.exerciseId,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
+                    Button(
+                        onClick = { onToggleStatus(task.taskId, task.completed) },
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (task.completed) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
+                            contentColor = if (task.completed) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onPrimary
+                        )
+                    ) {
+                        Icon(
+                            imageVector = if (task.completed) Icons.Default.Undo else Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (task.completed) "بازگردانی به صف" else if (task.setNumber == task.totalSets) "انجام آخرین ست" else "تکمیل ست ${task.setNumber}",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }

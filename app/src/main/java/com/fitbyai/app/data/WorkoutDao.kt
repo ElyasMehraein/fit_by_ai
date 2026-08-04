@@ -36,6 +36,9 @@ interface WorkoutDao {
     @Query("UPDATE workout_tasks SET completed = :completed WHERE taskId = :taskId")
     suspend fun updateTaskStatus(taskId: String, completed: Boolean)
 
+    @Query("DELETE FROM workout_tasks WHERE taskId = :taskId")
+    suspend fun deleteTask(taskId: String)
+
     @Query("DELETE FROM workout_tasks")
     suspend fun clearTasks()
 

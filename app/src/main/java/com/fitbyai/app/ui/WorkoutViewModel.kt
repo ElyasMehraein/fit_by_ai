@@ -62,6 +62,12 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
         }
     }
 
+    fun deleteTask(taskId: String) {
+        viewModelScope.launch {
+            repository.deleteTask(taskId)
+        }
+    }
+
     fun saveProfile(
         height: String, age: String, gender: String, goal: String,
         baseWeight: String, baseWaist: String, experience: String,

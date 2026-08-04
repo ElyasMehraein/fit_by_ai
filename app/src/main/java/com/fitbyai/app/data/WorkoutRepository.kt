@@ -60,6 +60,10 @@ class WorkoutRepository(private val dao: WorkoutDao) {
         dao.updateTaskStatus(taskId, completed)
     }
 
+    suspend fun deleteTask(taskId: String) {
+        dao.deleteTask(taskId)
+    }
+
     suspend fun generateAiPrompt(
         weight: String,
         waist: String,
