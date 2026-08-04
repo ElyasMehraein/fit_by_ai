@@ -36,6 +36,7 @@ fun SwipeableTaskCard(
         // matches physical screen movement 1:1 without RTL inversion or sticking bugs.
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
             val dismissState = rememberSwipeToDismissBoxState(
+                positionalThreshold = { totalDistance -> totalDistance * 0.75f },
                 confirmValueChange = { dismissValue ->
                     when (dismissValue) {
                         SwipeToDismissBoxValue.StartToEnd -> {
@@ -69,88 +70,63 @@ fun SwipeableTaskCard(
                             .background(
                                 when {
                                     isRightSwipeDone -> Brush.horizontalGradient(
-                                        colors = listOf(Color(0xEE2E7D32), Color(0x994CAF50), Color(0x3381C784))
+                                        colors = listOf(Color(0xFF1B5E20), Color(0xFF2E7D32), Color(0xFF4CAF50))
                                     )
                                     isLeftSwipeDelete -> Brush.horizontalGradient(
-                                        colors = listOf(Color(0x33E57373), Color(0x99E53935), Color(0xEEC62828))
+                                        colors = listOf(Color(0xFFEF5350), Color(0xFFC62828), Color(0xFF8E0000))
                                     )
                                     else -> Brush.horizontalGradient(colors = listOf(Color.Transparent, Color.Transparent))
                                 }
                             )
-                    )
-                },
-                content = {
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                            content()
-                        }
-
-                        val direction = dismissState.dismissDirection
-                        val isRightSwipeDone = direction == SwipeToDismissBoxValue.StartToEnd
-                        val isLeftSwipeDelete = direction == SwipeToDismissBoxValue.EndToStart
-
-                        if (isRightSwipeDone || isLeftSwipeDelete) {
-                            Box(
-                                modifier = Modifier
-                                    .matchParentSize()
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .background(
-                                        if (isRightSwipeDone) {
-                                            Brush.horizontalGradient(
-                                                colors = listOf(Color(0xDD1B5E20), Color(0xEE2E7D32), Color(0x884CAF50))
-                                            )
-                                        } else {
-                                            Brush.horizontalGradient(
-                                                colors = listOf(Color(0x88EF5350), Color(0xEEC62828), Color(0xDD8E0000))
-                                            )
-                                        }
+                            .padding(horizontal = 24.dp),
+                        contentAlignment = if (isRightSwipeDone) Alignment.CenterStart else Alignment.CenterEnd
+                    ) {
+                        if (isRightSwipeDone) {
+                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.CheckCircle,
+                                        contentDescription = "انجام شد",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(32.dp)
                                     )
-                                    .padding(horizontal = 24.dp),
-                                contentAlignment = if (isRightSwipeDone) Alignment.CenterStart else Alignment.CenterEnd
-                            ) {
-                                if (isRightSwipeDone) {
-                                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            Icon(
-                                                Icons.Default.CheckCircle,
-                                                contentDescription = "انجام شد",
-                                                tint = Color.White,
-                                                modifier = Modifier.size(32.dp)
-                                            )
-                                            Text(
-                                                text = "انجام شد",
-                                                style = MaterialTheme.typography.titleLarge,
-                                                fontWeight = FontWeight.ExtraBold,
-                                                color = Color.White
-                                            )
-                                        }
-                                    }
-                                } else {
-                                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            Text(
-                                                text = "حذف",
-                                                style = MaterialTheme.typography.titleLarge,
-                                                fontWeight = FontWeight.ExtraBold,
-                                                color = Color.White
-                                            )
-                                            Icon(
-                                                Icons.Default.Delete,
-                                                contentDescription = "حذف",
-                                                tint = Color.White,
-                                                modifier = Modifier.size(32.dp)
-                                            )
-                                        }
-                                    }
+                                    Text(
+                                        text = "انجام شد",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                        } else if (isLeftSwipeDelete) {
+                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = "حذف",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color.White
+                                    )
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = "حذف",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(32.dp)
+                                    )
                                 }
                             }
                         }
+                    }
+                },
+                content = {
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                        content()
                     }
                 }
             )
