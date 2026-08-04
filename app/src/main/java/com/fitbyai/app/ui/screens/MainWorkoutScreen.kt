@@ -133,21 +133,23 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
                 .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            // Hero Progress Dashboard
-            HeroProgressCard(
-                uiState = uiState,
-                onOpenWeeklyReview = {
-                    if (uiState.userProfile == null) showProfileDialog = true else showReviewDialog = true
-                }
-            )
+            if (uiState.tasks.isNotEmpty()) {
+                // Hero Progress Dashboard
+                HeroProgressCard(
+                    uiState = uiState,
+                    onOpenWeeklyReview = {
+                        if (uiState.userProfile == null) showProfileDialog = true else showReviewDialog = true
+                    }
+                )
 
-            // Segmented Tab Controls
-            M3SegmentedTabRow(
-                selectedTab = uiState.selectedTab,
-                queueCount = uiState.tasks.count { !it.completed },
-                doneCount = uiState.tasks.count { it.completed },
-                onTabSelected = { viewModel.setSelectedTab(it) }
-            )
+                // Segmented Tab Controls
+                M3SegmentedTabRow(
+                    selectedTab = uiState.selectedTab,
+                    queueCount = uiState.tasks.count { !it.completed },
+                    doneCount = uiState.tasks.count { it.completed },
+                    onTabSelected = { viewModel.setSelectedTab(it) }
+                )
+            }
 
             val queuedGroups = remember(uiState.tasks) {
                 uiState.tasks
@@ -163,11 +165,15 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
             val isQueueTab = uiState.selectedTab == "queue"
 
             if (uiState.tasks.isEmpty()) {
-                EmptyStateCard(
-                    onGetStarted = {
-                        if (uiState.userProfile == null) showProfileDialog = true else showReviewDialog = true
-                    }
-                )
+                if (uiState.userProfile == null) {
+                    NoProfileStateCard(
+                        onOpenProfile = { showProfileDialog = true }
+                    )
+                } else {
+                    NoWorkoutProgramStateCard(
+                        onGetStarted = { showReviewDialog = true }
+                    )
+                }
             } else if ((isQueueTab && queuedGroups.isEmpty()) || (!isQueueTab && doneTasks.isEmpty())) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -930,7 +936,69 @@ fun SingleSetTaskCard(
 }
 
 @Composable
-fun EmptyStateCard(onGetStarted: () -> Unit) {
+fun NoProfileStateCard(onOpenProfile: () -> Unit) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(32.dp),
+            shape = RoundedCornerShape(32.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f)
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.padding(32.dp)
+            ) {
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = CircleShape
+                ) {
+                    Icon(
+                        Icons.Default.PersonAdd,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .padding(20.dp)
+                            .size(48.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Text(
+                    text = "هنوز مشخصات ورزشی ثبت نشده است",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center
+                )
+
+                Text(
+                    text = "برای تولید برنامه تمرینی اختصاصی و هوشمند، ابتدا مشخصات ورزشی و اهداف خود را ثبت کنید.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 20.sp
+                )
+
+                Button(
+                    onClick = onOpenProfile,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.height(50.dp)
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("ثبت مشخصات و پروفایل ورزشی ✍️", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun NoWorkoutProgramStateCard(onGetStarted: () -> Unit) {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -970,7 +1038,7 @@ fun EmptyStateCard(onGetStarted: () -> Unit) {
                 )
 
                 Text(
-                    text = "مشخصات بدنی خود را وارد کنید تا هوش مصنوعی یک برنامه تمرینی کاملاً اختصاصی برای شما تولید کند.",
+                    text = "پروفایل ورزشی شما ثبت شده است. اکنون می‌توانید اولین برنامه تمرینی اختصاصی خود را دریافت کنید.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -982,9 +1050,9 @@ fun EmptyStateCard(onGetStarted: () -> Unit) {
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.height(50.dp)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null)
+                    Icon(Icons.Default.AutoAwesome, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("دریافت اولین برنامه شخصی", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    Text("دریافت اولین برنامه تمرینی 🚀", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 }
             }
         }
