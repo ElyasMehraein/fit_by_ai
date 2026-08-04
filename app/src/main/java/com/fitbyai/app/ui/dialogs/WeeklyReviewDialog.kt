@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+import androidx.compose.ui.text.style.TextDecoration
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WeeklyReviewDialog(
@@ -39,6 +41,7 @@ fun WeeklyReviewDialog(
     isLoading: Boolean,
     initialWeight: String = "",
     initialWaist: String = "",
+    profileLastUpdatedText: String = "همین الان",
     onDismiss: () -> Unit,
     onEditProfile: () -> Unit,
     onGeneratePrompt: (weight: String, waist: String, sleep: String, energy: Int, rpe: Int, pain: String, feedback: String) -> Unit,
@@ -47,8 +50,8 @@ fun WeeklyReviewDialog(
     val context = LocalContext.current
     val composeClipboardManager = LocalClipboardManager.current
 
-    var weight by remember { mutableStateOf(initialWeight) }
-    var waist by remember { mutableStateOf(initialWaist) }
+    val weight = initialWeight
+    val waist = initialWaist
     var sleepHours by remember { mutableStateOf(7.5f) }
     var energy by remember { mutableStateOf(8f) }
     var rpe by remember { mutableStateOf(7f) }
@@ -88,32 +91,50 @@ fun WeeklyReviewDialog(
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
             // Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Icon(
-                        Icons.Default.AutoAwesome,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Start,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Icon(
+                            Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "دریافت برنامه تمرینی",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    modifier = Modifier.padding(top = 2.dp)
+                ) {
+                    Text(
+                        text = "بر اساس ",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "بررسی هفتگی و دستیار AI",
-                        style = MaterialTheme.typography.titleLarge,
+                        text = "ویرایش پروفایل",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        textDecoration = TextDecoration.Underline,
+                        modifier = Modifier.clickable { onEditProfile() }
                     )
-                }
-                FilledTonalButton(
-                    onClick = onEditProfile,
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("ویرایش پروفایل", style = MaterialTheme.typography.labelMedium)
+                    Text(
+                        text = " (آخرین بروز رسانی $profileLastUpdatedText)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                    )
                 }
             }
 
@@ -124,24 +145,7 @@ fun WeeklyReviewDialog(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Text("شاخص‌های آنتروپومتریک و بازیابی این هفته", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        MetricInput(
-                            value = weight,
-                            onValueChange = { weight = it },
-                            label = "وزن جدید (kg)",
-                            icon = Icons.Default.MonitorWeight,
-                            modifier = Modifier.weight(1f)
-                        )
-                        MetricInput(
-                            value = waist,
-                            onValueChange = { waist = it },
-                            label = "دور کمر (cm)",
-                            icon = Icons.Default.Straighten,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
+                    Text("یک هفته اخیر اوضاع چطور بود؟", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
 
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -160,7 +164,7 @@ fun WeeklyReviewDialog(
                         )
 
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("سطح انرژی این هفته", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("سطح انرژی", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text("${energy.toInt()} / ۱۰", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                         }
                         Slider(
@@ -175,15 +179,9 @@ fun WeeklyReviewDialog(
                         )
 
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text("فشار تمرینات (RPE)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("فشار تمرینات", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text("${rpe.toInt()} / ۱۰", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
                         }
-                        Text(
-                            text = "💡 RPE چیست؟ شاخص سنجش میزان فشار تمرین از ۱ تا ۱۰؛ (۱ یعنی بسیار سبک و بی‌فشار، ۱۰ یعنی حداکثر فشار و ناتوانی مطلق).",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
-                            modifier = Modifier.padding(vertical = 2.dp)
-                        )
                         Slider(
                             value = rpe,
                             onValueChange = { rpe = it },
@@ -240,8 +238,13 @@ fun WeeklyReviewDialog(
                         Icon(Icons.Default.ContentCopy, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
                         Column(modifier = Modifier.weight(1f)) {
                             Text("پرامپت آماده شد! (جهت کپی کلیک کنید)", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(generatedPrompt, maxLines = 2, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "بعد از کپی، یک نرم افزار هوش مصنوعی مثلا چت جی پی تی را باز کنید و متن کپی شده را وارد آن کنید و پاسخ آن را برگردانید",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f),
+                                lineHeight = 18.sp
+                            )
                         }
                     }
                 }

@@ -233,6 +233,14 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
     if (showReviewDialog) {
         val lastWeight = uiState.history.lastOrNull()?.weight?.toString() ?: uiState.userProfile?.baseWeight ?: ""
         val lastWaist = uiState.history.lastOrNull()?.waist?.toString() ?: uiState.userProfile?.baseWaist ?: ""
+        val lastProfileUpdateStr = remember(uiState.profileHistory) {
+            val lastTimestamp = uiState.profileHistory.firstOrNull()?.timestamp
+            if (lastTimestamp != null) {
+                com.fitbyai.app.data.getRelativeTimeSpanString(lastTimestamp)
+            } else {
+                "همین الان"
+            }
+        }
 
         WeeklyReviewDialog(
             generatedPrompt = uiState.generatedPrompt,
@@ -240,6 +248,7 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
             isLoading = uiState.isLoading,
             initialWeight = lastWeight,
             initialWaist = lastWaist,
+            profileLastUpdatedText = lastProfileUpdateStr,
             onDismiss = { showReviewDialog = false },
             onEditProfile = {
                 showReviewDialog = false
