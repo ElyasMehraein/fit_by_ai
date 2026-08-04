@@ -70,25 +70,52 @@ class WorkoutRepository(private val dao: WorkoutDao) {
         val profile = dao.getUserProfile()
         val historyList = dao.getHistory()
         val weekNumber = historyList.size + 1
+        val currentTasks = dao.getTasks()
 
-        val historySummary = historyList.map { h ->
-            mapOf(
-                "week" to h.week,
-                "date" to h.date,
-                "body" to mapOf("weight" to h.weight, "waist" to h.waist),
-                "recovery" to mapOf("sleep" to h.sleep, "energy" to h.energy, "rpe" to h.rpe, "pain" to h.pain),
-                "completionRate" to "${h.completionRate}%",
-                "feedback" to h.feedback
-            )
+        // 1. Details of the recent/current workout program and completed sets
+        val currentWeekWorkoutText = if (currentTasks.isNotEmpty()) {
+            val grouped = currentTasks.groupBy { if (it.exerciseId.isNotBlank()) it.exerciseId else it.title }
+            val doneCount = currentTasks.count { it.completed }
+            val totalCount = currentTasks.size
+            val rate = if (totalCount > 0) ((doneCount.toDouble() / totalCount) * 100).toInt() else 0
+
+            val lines = grouped.map { (_, tasks) ->
+                val first = tasks.first()
+                val completedInGroup = tasks.count { it.completed }
+                "  • ${first.title}: ${tasks.size} ست (هدف هر ست: ${first.targetPerSet.ifEmpty { "اجرا" }}) | وضعیت: $completedInGroup از ${tasks.size} ست انجام شد"
+            }.joinToString("\n")
+
+            """
+            برنامه تمرینی هفته اخیر و میزان انجام حرکات:
+            - میزان کل ست‌های انجام‌شده: $doneCount از $totalCount ست ($rate%)
+            - لیست حرکات و تعداد ست‌های تمرین‌شده در این هفته:
+            $lines
+            """.trimIndent()
+        } else {
+            "برنامه تمرینی اخیر: هنوز حرکتی در صف ثبت نشده است (یا این اولین هفته تمرینی شماست)."
         }
 
-        val gson = Gson()
+        // 2. Details of past weeks history
+        val pastWeeksHistoryText = if (historyList.isNotEmpty()) {
+            historyList.joinToString("\n\n") { h ->
+                val exText = if (h.exerciseSummary.isNotBlank()) "\n  • حرکات تمرین‌شده: ${h.exerciseSummary}" else ""
+                """
+                - هفته ${h.week} (تاریخ: ${h.date}):
+                  • وزن: ${h.weight} کیلوگرم | دور کمر: ${h.waist} سانتی‌متر
+                  • ریکاوری: خواب: ${h.sleep} | انرژی: ${h.energy}/10 | سختی RPE: ${h.rpe}/10 | وضعیت درد: ${h.pain}
+                  • ست‌های تکمیل‌شده: ${h.completedSets} از ${h.totalSets} ست (${h.completionRate}%)
+                  • بازخورد کاربر: ${h.feedback.ifEmpty { "ثبت نشده" }}$exText
+                """.trimIndent()
+            }
+        } else {
+            "هنوز سابقه هفته‌های قبلی ثبت نشده است (این اولین هفته تمرینی است)."
+        }
 
         return """
 تو یک مربی ارشد و حرفه‌ای بدنسازی و فیتنس هستی.
-من یک هفته برنامه تمرینی قبلی را کامل کرده‌ام. اطلاعات سنجش بدنی و ریکاوری هفته اخیر من:
+من یک هفته برنامه تمرینی قبلی را کامل کرده‌ام. اطلاعات سنجش بدنی، ریکاوری و بازخورد هفته اخیر من:
 
-- هفته: $weekNumber
+- هفته کاری فعلی: $weekNumber
 - وزن جدید: $weight کیلوگرم
 - دور کمر جدید: $waist سانتی‌متر
 - میانگین خواب شبانه‌روز: $sleep
@@ -96,6 +123,10 @@ class WorkoutRepository(private val dao: WorkoutDao) {
 - میزان سختی تمرین / RPE (1 تا 10): $rpe
 - وضع دردهای جدید یا عضلانی: ${pain.ifEmpty { "بدون درد" }}
 - بازخورد و حس کار با برنامه قبلی: ${feedback.ifEmpty { "ثبت نشده" }}
+
+========================================
+$currentWeekWorkoutText
+========================================
 
 شناسنامه اولیه و کامل من:
 - قد: ${profile?.height ?: "-"} cm | سن: ${profile?.age ?: "-"} | جنسیت: ${profile?.gender ?: "-"}
@@ -109,13 +140,15 @@ class WorkoutRepository(private val dao: WorkoutDao) {
 - آسیب‌های قبلی و محدودیت‌ها: ${profile?.limitations ?: "-"}
 - بیماری خاص یا داروهای مصرفی: ${profile?.healthConditions?.ifEmpty { "ندارد" } ?: "ندارد"}
 
-تاریخچه پیشرفت هفته‌های گذشته من:
-${gson.toJson(historySummary)}
+========================================
+تاریخچه پیشرفت و عملکرد کامل هفته‌های گذشته:
+$pastWeeksHistoryText
+========================================
 
 دستورالعمل مهم جهت طراحی برنامه جدید:
 ۱. لطفاً در ابتدا از من بخواه یک عکس جدید از هیکلم با لباس مناسب، نور خوب و بدون فیلتر برات بفرستم.
 ۲. پس از دریافت عکس، روند تغییرات ظاهری، وزن، دور کمر، خواب، انرژی و بازخوردهای من را دقیقاً مقایسه کن.
-۳. در صورت ضرورت، شدت (RPE)، تعداد ست‌ها یا حجم تمرین را تنظیم کرده یا در صورت نیاز هفته دِلود (Deload) تجویز کن.
+۳. بر اساس حرکات هفته قبل و میزان ست‌های انجام‌شده، اصل اضافه بار تدریجی (Progressive Overload) را رعایت کن. در صورت ضرورت، شدت (RPE)، تعداد ست‌ها یا حجم تمرین را تنظیم کرده یا در صورت نیاز هفته دِلود (Deload) تجویز کن.
 ۴. برنامه تمرینی کلاً به‌صورت یک بانک/حجم کلی ست‌های هفتگی (Weekly Sets) باشد و به روزهای خاص تقسیم نشود؛ به طوری که کاربر مختار باشد تمام ست‌ها را در ۱ روز بزند یا بین ۲ تا ۶ روز تقسیم کند و محدودیتی نداشته باشد.
 ۵. شناسه هر حرکت (id) باید اسم دقیق و استاندارد انگلیسی حرکت مانند bench_press، barbell_squat، push_up، dumbbell_bicep_curl، lat_pulldown، plank، deadlift و... باشد.
 ۶. برای هر حرکت حتماً مقدار/هدف دقیق هر ست (مثلاً «۱۰ الی ۱۲ تکرار»، «۴۵ ثانیه»، «۲۰ شنا»، «۱۵ دقیقه پیاده‌روی» یا «تا ناتوانی») را در کلید targetPerSet مشخص کن.
@@ -161,6 +194,13 @@ ${gson.toJson(historySummary)}
                 val historyList = dao.getHistory()
                 val profile = dao.getUserProfile()
 
+                val exerciseSummaryStr = currentTasks.groupBy { if (it.exerciseId.isNotBlank()) it.exerciseId else it.title }
+                    .map { (_, tasks) ->
+                        val first = tasks.first()
+                        val done = tasks.count { it.completed }
+                        "${first.title} (${tasks.size} ست - $done انجام شد)"
+                    }.joinToString("، ")
+
                 val historyRecord = WeeklyHistoryEntity(
                     week = historyList.size + 1,
                     date = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date()),
@@ -174,7 +214,8 @@ ${gson.toJson(historySummary)}
                     totalSets = totalCount,
                     completionRate = if (totalCount > 0) ((doneCount.toDouble() / totalCount) * 100).toInt() else 100,
                     feedback = feedback.ifEmpty { "تمرینات هفته انجام شد" },
-                    exerciseCount = payload.exercises.size
+                    exerciseCount = payload.exercises.size,
+                    exerciseSummary = exerciseSummaryStr
                 )
                 dao.insertHistory(historyRecord)
             }

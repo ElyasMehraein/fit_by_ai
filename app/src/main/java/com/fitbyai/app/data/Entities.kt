@@ -92,7 +92,8 @@ data class WeeklyHistoryEntity(
     val totalSets: Int,
     val completionRate: Int,
     val feedback: String,
-    val exerciseCount: Int
+    val exerciseCount: Int,
+    val exerciseSummary: String = ""
 )
 
 @Entity(tableName = "weekly_metadata")

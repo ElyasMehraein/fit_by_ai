@@ -14,7 +14,7 @@ import androidx.room.TypeConverters
         WeeklyHistoryEntity::class,
         WeeklyMetadataEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(StringListConverter::class)
