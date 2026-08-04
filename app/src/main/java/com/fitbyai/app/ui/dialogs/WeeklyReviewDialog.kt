@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextDirection
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -340,7 +341,10 @@ fun WeeklyReviewDialog(
                         .fillMaxWidth()
                         .height(110.dp),
                     shape = RoundedCornerShape(16.dp),
-                    textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
+                    textStyle = MaterialTheme.typography.bodySmall.copy(
+                        fontFamily = FontFamily.Monospace,
+                        textDirection = TextDirection.ContentOrLtr
+                    )
                 )
 
                 if (!errorMessage.isNullOrBlank()) {
@@ -397,8 +401,27 @@ fun MetricInput(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     modifier: Modifier = Modifier
 ) {
-    var textFieldValueState by remember(value) {
+    var textFieldValueState by remember {
         mutableStateOf(TextFieldValue(text = value))
+    }
+    var isFocused by remember { mutableStateOf(false) }
+
+    LaunchedEffect(value) {
+        if (value != textFieldValueState.text) {
+            textFieldValueState = TextFieldValue(
+                text = value,
+                selection = TextRange(value.length)
+            )
+        }
+    }
+
+    LaunchedEffect(isFocused) {
+        if (isFocused && textFieldValueState.text.isNotEmpty()) {
+            kotlinx.coroutines.delay(50)
+            textFieldValueState = textFieldValueState.copy(
+                selection = TextRange(0, textFieldValueState.text.length)
+            )
+        }
     }
 
     OutlinedTextField(
@@ -410,15 +433,13 @@ fun MetricInput(
         label = { Text(label, style = MaterialTheme.typography.labelSmall) },
         leadingIcon = { Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp)) },
         modifier = modifier.onFocusChanged { focusState ->
-            if (focusState.isFocused && textFieldValueState.text.isNotEmpty()) {
-                textFieldValueState = textFieldValueState.copy(
-                    selection = TextRange(0, textFieldValueState.text.length)
-                )
-            }
+            isFocused = focusState.isFocused
         },
         singleLine = true,
         shape = RoundedCornerShape(14.dp),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        textStyle = MaterialTheme.typography.bodyMedium
+        textStyle = MaterialTheme.typography.bodyMedium.copy(
+            textDirection = TextDirection.Ltr
+        )
     )
 }

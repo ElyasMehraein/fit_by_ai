@@ -21,6 +21,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextDirection
 import com.fitbyai.app.data.UserProfileEntity
 import com.fitbyai.app.data.ProfileHistoryEntity
 import com.fitbyai.app.data.getRelativeTimeSpanString
@@ -507,9 +508,36 @@ fun SelectAllOutlinedTextField(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     textStyle: TextStyle = LocalTextStyle.current
 ) {
-    var textFieldValueState by remember(value) {
+    var textFieldValueState by remember {
         mutableStateOf(TextFieldValue(text = value))
     }
+    var isFocused by remember { mutableStateOf(false) }
+
+    LaunchedEffect(value) {
+        if (value != textFieldValueState.text) {
+            textFieldValueState = TextFieldValue(
+                text = value,
+                selection = TextRange(value.length)
+            )
+        }
+    }
+
+    LaunchedEffect(isFocused) {
+        if (isFocused && textFieldValueState.text.isNotEmpty()) {
+            kotlinx.coroutines.delay(50)
+            textFieldValueState = textFieldValueState.copy(
+                selection = TextRange(0, textFieldValueState.text.length)
+            )
+        }
+    }
+
+    val resolvedTextStyle = textStyle.copy(
+        textDirection = if (keyboardOptions.keyboardType == KeyboardType.Number) {
+            TextDirection.Ltr
+        } else {
+            TextDirection.ContentOrLtr
+        }
+    )
 
     OutlinedTextField(
         value = textFieldValueState,
@@ -520,15 +548,11 @@ fun SelectAllOutlinedTextField(
         label = label,
         leadingIcon = leadingIcon,
         modifier = modifier.onFocusChanged { focusState ->
-            if (focusState.isFocused && textFieldValueState.text.isNotEmpty()) {
-                textFieldValueState = textFieldValueState.copy(
-                    selection = TextRange(0, textFieldValueState.text.length)
-                )
-            }
+            isFocused = focusState.isFocused
         },
         singleLine = singleLine,
         shape = shape,
         keyboardOptions = keyboardOptions,
-        textStyle = textStyle
+        textStyle = resolvedTextStyle
     )
 }

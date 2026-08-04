@@ -779,7 +779,7 @@ fun StackedExerciseTaskCard(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "تکمیل ست ${activeTask.setNumber}",
+                        text = if (activeTask.setNumber == activeTask.totalSets) "انجام آخرین ست" else "تکمیل ست ${activeTask.setNumber}",
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -894,26 +894,34 @@ fun SingleSetTaskCard(
                 )
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (!task.completed) {
-                    Button(
-                        onClick = { onToggleStatus(task.taskId, task.completed) },
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        ),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("انجام شد", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                    }
-                } else {
+            if (!task.completed) {
+                Button(
+                    onClick = { onToggleStatus(task.taskId, task.completed) },
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                ) {
+                    Icon(
+                        Icons.Default.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "انجام آخرین ست",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     OutlinedButton(
                         onClick = { onToggleStatus(task.taskId, task.completed) },
                         shape = RoundedCornerShape(14.dp),
@@ -923,13 +931,13 @@ fun SingleSetTaskCard(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text("بازگردانی به صف", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Medium)
                     }
-                }
 
-                Text(
-                    text = task.exerciseId,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.outline
-                )
+                    Text(
+                        text = task.exerciseId,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
             }
         }
     }
