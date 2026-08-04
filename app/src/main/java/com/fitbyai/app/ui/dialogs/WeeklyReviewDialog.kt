@@ -57,13 +57,16 @@ fun WeeklyReviewDialog(
     var energy by remember { mutableStateOf(8f) }
     var rpe by remember { mutableStateOf(7f) }
     var muscleSoreness by remember { mutableStateOf("عادی / خفیف") }
-    var jointPain by remember { mutableStateOf("بدون درد مفصلی") }
-    var customJointPain by remember { mutableStateOf("") }
+    var jointPainSet by remember { mutableStateOf(setOf("بدون درد مفصلی")) }
     var feedback by remember { mutableStateOf("") }
     var jsonInput by remember { mutableStateOf("") }
 
     val jointOptions = listOf("بدون درد مفصلی", "شانه", "زانو", "مچ دست / آرنج", "کمر / ستون فقرات", "مچ پا")
-    val sorenessOptions = listOf("عادی / خفیف", "متوسط", "شدید (تاخیر بالای ۴۸ ساعت)")
+    val sorenessOptions = listOf("عادی / خفیف", "متوسط", "شدید (>۴۸ساعت)")
+
+    val finalJointPain = remember(jointPainSet) {
+        if (jointPainSet.contains("بدون درد مفصلی") || jointPainSet.isEmpty()) "بدون درد مفصلی" else jointPainSet.joinToString("، ")
+    }
 
     var detectedClipboardJson by remember { mutableStateOf<String?>(null) }
 
@@ -220,33 +223,38 @@ fun WeeklyReviewDialog(
                             }
                         }
 
-                        // Joint / Tendon Pain Assessment
+                        // Joint / Tendon Pain Assessment (Multi-select)
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
-                                Text("وضعیت دردهای مفصلی / تاندونی (آسیب‌شناسی):", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+                                Text("دردهای مفصلی / تاندونی (انتخاب چندگانه):", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
                             }
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    jointOptions.take(3).forEach { option ->
-                                        val selected = jointPain == option
-                                        FilterChip(
-                                            selected = selected,
-                                            onClick = { jointPain = option },
-                                            label = { Text(option, style = MaterialTheme.typography.labelSmall) },
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                    }
-                                }
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    jointOptions.drop(3).forEach { option ->
-                                        val selected = jointPain == option
-                                        FilterChip(
-                                            selected = selected,
-                                            onClick = { jointPain = option },
-                                            label = { Text(option, style = MaterialTheme.typography.labelSmall) },
-                                            modifier = Modifier.weight(1f)
-                                        )
+                                val rows = listOf(jointOptions.take(3), jointOptions.drop(3))
+                                rows.forEach { rowOptions ->
+                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        rowOptions.forEach { option ->
+                                            val selected = jointPainSet.contains(option)
+                                            FilterChip(
+                                                selected = selected,
+                                                onClick = {
+                                                    if (option == "بدون درد مفصلی") {
+                                                        jointPainSet = setOf("بدون درد مفصلی")
+                                                    } else {
+                                                        val nextSet = jointPainSet.toMutableSet()
+                                                        nextSet.remove("بدون درد مفصلی")
+                                                        if (selected) {
+                                                            nextSet.remove(option)
+                                                        } else {
+                                                            nextSet.add(option)
+                                                        }
+                                                        jointPainSet = if (nextSet.isEmpty()) setOf("بدون درد مفصلی") else nextSet
+                                                    }
+                                                },
+                                                label = { Text(option, style = MaterialTheme.typography.labelSmall) },
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -258,7 +266,6 @@ fun WeeklyReviewDialog(
             // AI Prompt Generation Action
             Button(
                 onClick = {
-                    val finalJointPain = if (jointPain == "بدون درد مفصلی") "بدون درد مفصلی" else jointPain
                     onGeneratePrompt(
                         weight, waist, String.format("%.1f", sleepHours),
                         energy.toInt(), rpe.toInt(), finalJointPain, feedback,
@@ -313,7 +320,23 @@ fun WeeklyReviewDialog(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
 
-            // Import JSON Program Section with Auto Clipboard Banner
+            // Import JSON Program Section with Select-All on Focus TextField
+            var jsonTextFieldState by remember { mutableStateOf(TextFieldValue(text = jsonInput)) }
+            var isJsonFocused by remember { mutableStateOf(false) }
+
+            LaunchedEffect(jsonInput) {
+                if (jsonInput != jsonTextFieldState.text) {
+                    jsonTextFieldState = TextFieldValue(text = jsonInput, selection = TextRange(jsonInput.length))
+                }
+            }
+
+            LaunchedEffect(isJsonFocused) {
+                if (isJsonFocused && jsonTextFieldState.text.isNotEmpty()) {
+                    kotlinx.coroutines.delay(50)
+                    jsonTextFieldState = jsonTextFieldState.copy(selection = TextRange(0, jsonTextFieldState.text.length))
+                }
+            }
+
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -327,6 +350,7 @@ fun WeeklyReviewDialog(
                             val clipText = composeClipboardManager.getText()?.text
                             if (!clipText.isNullOrBlank()) {
                                 jsonInput = clipText
+                                jsonTextFieldState = TextFieldValue(text = clipText, selection = TextRange(clipText.length))
                                 Toast.makeText(context, "متن از حافظه چسبانده شد ✅", Toast.LENGTH_SHORT).show()
                             } else {
                                 Toast.makeText(context, "حافظه موقت (Clipboard) خالی است", Toast.LENGTH_SHORT).show()
@@ -368,7 +392,7 @@ fun WeeklyReviewDialog(
                             Button(
                                 onClick = {
                                     jsonInput = detectedClipboardJson!!
-                                    val finalJointPain = if (jointPain == "بدون درد مفصلی") "بدون درد مفصلی" else jointPain
+                                    jsonTextFieldState = TextFieldValue(text = detectedClipboardJson!!, selection = TextRange(detectedClipboardJson!!.length))
                                     onImportProgram(
                                         jsonInput, weight, waist, String.format("%.1f", sleepHours),
                                         energy.toInt(), rpe.toInt(), finalJointPain, feedback,
@@ -385,14 +409,18 @@ fun WeeklyReviewDialog(
                 }
 
                 OutlinedTextField(
-                    value = jsonInput,
-                    onValueChange = { jsonInput = it },
+                    value = jsonTextFieldState,
+                    onValueChange = { newValue ->
+                        jsonTextFieldState = newValue
+                        jsonInput = newValue.text
+                    },
                     placeholder = { Text("کد پاسخ هوش مصنوعی را اینجا بچسبانید...", style = MaterialTheme.typography.bodySmall) },
                     trailingIcon = {
                         IconButton(onClick = {
                             val clipText = composeClipboardManager.getText()?.text
                             if (!clipText.isNullOrBlank()) {
                                 jsonInput = clipText
+                                jsonTextFieldState = TextFieldValue(text = clipText, selection = TextRange(clipText.length))
                                 Toast.makeText(context, "متن چسبانده شد ✅", Toast.LENGTH_SHORT).show()
                             }
                         }) {
@@ -401,7 +429,10 @@ fun WeeklyReviewDialog(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(110.dp),
+                        .height(115.dp)
+                        .onFocusChanged { focusState ->
+                            isJsonFocused = focusState.isFocused
+                        },
                     shape = RoundedCornerShape(16.dp),
                     textStyle = MaterialTheme.typography.bodySmall.copy(
                         fontFamily = FontFamily.Monospace,
@@ -426,7 +457,6 @@ fun WeeklyReviewDialog(
 
                 Button(
                     onClick = {
-                        val finalJointPain = if (jointPain == "بدون درد مفصلی") "بدون درد مفصلی" else jointPain
                         onImportProgram(
                             jsonInput, weight, waist, String.format("%.1f", sleepHours),
                             energy.toInt(), rpe.toInt(), finalJointPain, feedback,

@@ -47,7 +47,7 @@ fun ProfileDialog(
     var baseWaist by remember { mutableStateOf(currentProfile?.baseWaist ?: "") }
     var experience by remember {
         mutableStateOf(
-            currentProfile?.experience?.filter { it.isDigit() }?.ifEmpty { "6" } ?: "6"
+            currentProfile?.experience?.filter { it.isDigit() }?.ifEmpty { "2" } ?: "2"
         )
     }
     var daysPerWeek by remember {
@@ -277,7 +277,7 @@ fun ProfileDialog(
                         SelectAllOutlinedTextField(
                             value = experience,
                             onValueChange = { experience = it },
-                            label = { Text("سابقه تمرین (ماه)") },
+                            label = { Text("سابقه تمرین (سال)") },
                             leadingIcon = { Icon(Icons.Default.FitnessCenter, contentDescription = null) },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(16.dp),

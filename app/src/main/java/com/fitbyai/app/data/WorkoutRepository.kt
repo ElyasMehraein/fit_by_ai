@@ -149,7 +149,7 @@ $currentWeekWorkoutText
 - قد: ${profile?.height ?: "-"} cm | سن: ${profile?.age ?: "-"} | جنسیت: ${profile?.gender ?: "-"}
 - وزن پایه: ${profile?.baseWeight ?: "-"} kg | دور کمر پایه: ${profile?.baseWaist ?: "-"} cm | وزن هدف: ${profile?.targetWeight?.ifEmpty { "-" } ?: "-"} kg
 - هدف اصلی: ${profile?.goal ?: "-"}
-- سابقه تمرینی: ${profile?.experience?.let { if (it.isNotBlank() && it.all { c -> c.isDigit() }) "$it ماه" else it } ?: "-"}
+- سابقه تمرینی: ${profile?.experience?.let { if (it.isNotBlank() && it.all { c -> c.isDigit() }) "$it سال" else it } ?: "-"}
 - روزهای تمرین در هفته: ${profile?.daysPerWeek?.let { if (it.isNotBlank() && it.all { c -> c.isDigit() }) "$it روز در هفته" else it } ?: "-"}
 - زمان در دسترس هر جلسه: ${profile?.sessionDuration?.let { if (it.isNotBlank() && it.all { c -> c.isDigit() }) "$it دقیقه" else it } ?: "-"}
 - سطح فعالیت روزمره: ${profile?.activityLevel?.ifEmpty { "-" } ?: "-"}
@@ -168,10 +168,11 @@ $pastWeeksHistoryText
 ۳. بر اساس اصل اضافه بار تدریجی (Progressive Overload)، شدت (RPE)، تعداد ست‌ها یا حجم تمرین را تنظیم کرده یا در صورت خستگی شدید/درد مفصلی هفته دِلود (Deload) تجویز کن.
 ۴. **الگوهای حرکتی پایه (Movement Patterns)**: حتماً تعادل بین الگوهای حرکتی اصلی (Push, Pull, Squat, Hinge, Lunge, Carry, Core) و تعادل عضلات آگونیست و آنتاگونیست (مثلاً سینه و پشت، چهارسر و همسترینگ) را رعایت کن.
 ۵. **تکرار در ذخیره (RIR)**: در کلید targetPerSet علاوه بر تعداد تکرار، حتماً مقدار RIR مناسب (مثلاً RIR 1 تا 3) را ذکر کن (مثلاً: «۱۰ الی ۱۲ تکرار (RIR 2)»).
-۶. **عضله هدف (targetMuscle)** و **الگوی حرکتی (movementPattern)** را برای هر حرکت به صورت شفاف تعیین کن (از مقادیر استاندارد فارسی مانند: سینه، پشت، پا، شانه، بازو، شکم و پهلو).
-۷. برنامه به‌صورت یک بانک حجم کلی ست‌های هفتگی (Weekly Sets) باشد و به روزهای خاص تقسیم نشود تا کاربر آزادانه ست‌ها را در طول هفته توزیع کند.
-۸. شناسه هر حرکت (id) باید اسم دقیق انگلیسی مانند bench_press، barbell_squat، push_up، dumbbell_bicep_curl، lat_pulldown، plank، deadlift و... باشد.
-۹. خروجی نهایی برنامه تمرینی هفته جدید را فقط و فقط در قالب یک آبجکت معتبر JSON مطابق ساختار زیر ارسال کن (بدون هیچ متن اضافی قبل یا بعد از کد):
+۶. **عضله هدف (targetMuscle)** و **الگوی حرکتی (movementPattern)** را برای هر حرکت به صورت شفاف تعیین کن (از مقادیر استاندارد فارسی مانند: سینه، پشت، پا، شانه، بازو، شکم).
+۷. **محاسبه هوشمند حجم کل ست‌های هفتگی (Weekly Sets Volume)**: حجم کل ست‌های هفتگی را بر اساس **هدف کاربر**، **مقدار تحرک روزمره**، **سابقه ورزشی (سال)** و **وضعیت ریکاوری/خواب/انرژی** تعیین کن. برای عضلات اصلی (سینه، پشت، پا، شانه) مجموعاً ۱۰ الی ۲۲ ست هفتگی و برای عضلات فرعی/کوچک ۶ الی ۱۴ ست هفتگی در کل برنامه (بین چند حرکت مجزا) توزیع کن.
+۸. کلید `weeklySets` نشان‌دهنده **مجموع کل ست‌های آن حرکت در طول کل ۱ هفته** است و به روزهای خاص تقسیم نمی‌شود تا کاربر آزادانه ست‌ها را در طول هفته توزیع کند.
+۹. شناسه هر حرکت (id) باید اسم دقیق انگلیسی مانند bench_press، barbell_squat، push_up، dumbbell_bicep_curl، lat_pulldown، plank، deadlift و... باشد.
+۱۰. خروجی نهایی برنامه تمرینی هفته جدید را فقط و فقط در قالب یک آبجکت معتبر JSON مطابق ساختار زیر ارسال کن (بدون هیچ متن اضافی قبل یا بعد از کد):
 
 {
   "exercises": [
@@ -179,10 +180,28 @@ $pastWeeksHistoryText
       "id": "bench_press",
       "title": "پرس سینه با هالتر",
       "description": "توضیحات کامل تکنیک اجرای صحیح و کنترل فاز منفی",
-      "weeklySets": 4,
+      "weeklySets": 6,
       "targetPerSet": "۱۰ الی ۱۲ تکرار (RIR 2)",
       "movementPattern": "Push",
       "targetMuscle": "سینه"
+    },
+    {
+      "id": "incline_dumbbell_press",
+      "title": "پرس سینه بالاسینه با دمبل",
+      "description": "تمرکز روی بخش بالایی سینه و کنترل دامنه حرکت",
+      "weeklySets": 6,
+      "targetPerSet": "۱۰ الی ۱۲ تکرار (RIR 2)",
+      "movementPattern": "Push",
+      "targetMuscle": "سینه"
+    },
+    {
+      "id": "barbell_squat",
+      "title": "اسکوات با هالتر",
+      "description": "اجرای کامل با حفظ قوس طبیعی کمر",
+      "weeklySets": 8,
+      "targetPerSet": "۸ الی ۱۰ تکرار (RIR 2)",
+      "movementPattern": "Squat",
+      "targetMuscle": "پا"
     }
   ]
 }
