@@ -68,6 +68,12 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
         }
     }
 
+    fun updateExerciseImage(exerciseId: String, title: String, imageUrl: String) {
+        viewModelScope.launch {
+            repository.updateExerciseImage(exerciseId, title, imageUrl)
+        }
+    }
+
     fun saveProfile(
         height: String, age: String, gender: String, goal: String,
         baseWeight: String, baseWaist: String, experience: String,

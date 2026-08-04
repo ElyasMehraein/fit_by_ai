@@ -60,6 +60,20 @@ class WorkoutRepository(private val dao: WorkoutDao) {
         dao.updateTaskStatus(taskId, completed)
     }
 
+    suspend fun updateExerciseImage(exerciseId: String, title: String, imageUrl: String) {
+        val tasks = dao.getTasks()
+        val updatedTasks = tasks.map { task ->
+            val matchesId = exerciseId.isNotBlank() && task.exerciseId.equals(exerciseId, ignoreCase = true)
+            val matchesTitle = title.isNotBlank() && task.title.equals(title, ignoreCase = true)
+            if (matchesId || matchesTitle) {
+                task.copy(images = listOf(imageUrl))
+            } else {
+                task
+            }
+        }
+        dao.insertTasks(updatedTasks)
+    }
+
     suspend fun deleteTask(taskId: String) {
         dao.deleteTask(taskId)
     }

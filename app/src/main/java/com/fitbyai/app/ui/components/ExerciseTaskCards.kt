@@ -1,22 +1,29 @@
 package com.fitbyai.app.ui.components
 
-import android.content.Intent
-import android.net.Uri
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.fitbyai.app.data.ExerciseImageHelper
 import com.fitbyai.app.data.WorkoutTaskEntity
+import com.fitbyai.app.ui.dialogs.GoogleImageSearchDialog
 
 data class TaskGroup(
     val key: String,
@@ -27,13 +34,25 @@ data class TaskGroup(
 fun StackedExerciseTaskCard(
     taskGroup: TaskGroup,
     onToggleStatus: (taskId: String, currentStatus: Boolean) -> Unit,
-    onDeleteTask: (taskId: String) -> Unit
+    onDeleteTask: (taskId: String) -> Unit,
+    onUpdateImage: (exerciseId: String, title: String, imageUrl: String) -> Unit
 ) {
     val activeTask = taskGroup.tasks.firstOrNull() ?: return
     val remainingSetsCount = taskGroup.tasks.size
     val context = LocalContext.current
+    var showSearchDialog by remember { mutableStateOf(false) }
 
     val peekCount = (remainingSetsCount - 1).coerceAtMost(3)
+
+    if (showSearchDialog) {
+        GoogleImageSearchDialog(
+            exerciseTitle = activeTask.title,
+            onDismiss = { showSearchDialog = false },
+            onImageSelected = { imageUrl ->
+                onUpdateImage(activeTask.exerciseId, activeTask.title, imageUrl)
+            }
+        )
+    }
 
     Box(
         modifier = Modifier
@@ -205,6 +224,58 @@ fun StackedExerciseTaskCard(
                         }
                     }
 
+                    // Exercise Image Banner
+                    val exerciseImageUrl = remember(activeTask.images, activeTask.exerciseId, activeTask.title) {
+                        ExerciseImageHelper.getExerciseImageUrl(activeTask.exerciseId, activeTask.title, activeTask.images)
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(160.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable { showSearchDialog = true }
+                    ) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(exerciseImageUrl)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = activeTask.title,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+
+                        // Top-Right Change Photo Badge
+                        Surface(
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "تغییر عکس",
+                                    modifier = Modifier.size(14.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = "تغییر عکس",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+
                     if (activeTask.description.isNotBlank()) {
                         Text(
                             text = activeTask.description,
@@ -214,16 +285,9 @@ fun StackedExerciseTaskCard(
                         )
                     }
 
-                    // Search Images Button
+                    // Search & Pick Image Button
                     OutlinedButton(
-                        onClick = {
-                            val searchQuery = Uri.encode("حرکت ورزشی ${activeTask.title}")
-                            val intent = Intent(
-                                Intent.ACTION_VIEW,
-                                Uri.parse("https://www.google.com/search?q=$searchQuery&tbm=isch")
-                            )
-                            context.startActivity(intent)
-                        },
+                        onClick = { showSearchDialog = true },
                         shape = RoundedCornerShape(14.dp),
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.outlinedButtonColors(
@@ -232,12 +296,12 @@ fun StackedExerciseTaskCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Search,
-                            contentDescription = "جستجوی تصاویر گوگل",
+                            contentDescription = "جستجوی عکس در گوگل",
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "مشاهده تصاویر حرکت در گوگل",
+                            text = "جستجو و انتخاب عکس از گوگل",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -296,9 +360,21 @@ fun StackedExerciseTaskCard(
 fun SingleSetTaskCard(
     task: WorkoutTaskEntity,
     onToggleStatus: (taskId: String, currentStatus: Boolean) -> Unit,
-    onDeleteTask: (taskId: String) -> Unit
+    onDeleteTask: (taskId: String) -> Unit,
+    onUpdateImage: (exerciseId: String, title: String, imageUrl: String) -> Unit
 ) {
     val context = LocalContext.current
+    var showSearchDialog by remember { mutableStateOf(false) }
+
+    if (showSearchDialog) {
+        GoogleImageSearchDialog(
+            exerciseTitle = task.title,
+            onDismiss = { showSearchDialog = false },
+            onImageSelected = { imageUrl ->
+                onUpdateImage(task.exerciseId, task.title, imageUrl)
+            }
+        )
+    }
 
     SwipeableTaskCard(
         task = task,
@@ -386,6 +462,58 @@ fun SingleSetTaskCard(
                     }
                 }
 
+                // Exercise Image Banner
+                val exerciseImageUrl = remember(task.images, task.exerciseId, task.title) {
+                    ExerciseImageHelper.getExerciseImageUrl(task.exerciseId, task.title, task.images)
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable { showSearchDialog = true }
+                ) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(exerciseImageUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = task.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    // Top-Right Change Photo Badge
+                    Surface(
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "تغییر عکس",
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = "تغییر عکس",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+
                 if (task.description.isNotBlank()) {
                     Text(
                         text = task.description,
@@ -395,16 +523,9 @@ fun SingleSetTaskCard(
                     )
                 }
 
-                // Search Images Button
+                // Search & Pick Image Button
                 OutlinedButton(
-                    onClick = {
-                        val searchQuery = Uri.encode("حرکت ورزشی ${task.title}")
-                        val intent = Intent(
-                            Intent.ACTION_VIEW,
-                            Uri.parse("https://www.google.com/search?q=$searchQuery&tbm=isch")
-                        )
-                        context.startActivity(intent)
-                    },
+                    onClick = { showSearchDialog = true },
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.outlinedButtonColors(
@@ -413,12 +534,12 @@ fun SingleSetTaskCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Search,
-                        contentDescription = "جستجوی تصاویر گوگل",
+                        contentDescription = "جستجوی عکس در گوگل",
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "مشاهده تصاویر حرکت در گوگل",
+                        text = "جستجو و انتخاب عکس از گوگل",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold
                     )

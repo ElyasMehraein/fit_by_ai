@@ -189,6 +189,9 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
                                         },
                                         onDeleteTask = { taskId ->
                                             viewModel.deleteTask(taskId)
+                                        },
+                                        onUpdateImage = { exerciseId, title, imageUrl ->
+                                            viewModel.updateExerciseImage(exerciseId, title, imageUrl)
                                         }
                                     )
                                 } else {
@@ -199,6 +202,9 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
                                         },
                                         onDeleteTask = { taskId ->
                                             viewModel.deleteTask(taskId)
+                                        },
+                                        onUpdateImage = { exerciseId, title, imageUrl ->
+                                            viewModel.updateExerciseImage(exerciseId, title, imageUrl)
                                         }
                                     )
                                 }
@@ -212,6 +218,9 @@ fun MainWorkoutScreen(viewModel: WorkoutViewModel) {
                                     },
                                     onDeleteTask = { taskId ->
                                         viewModel.deleteTask(taskId)
+                                    },
+                                    onUpdateImage = { exerciseId, title, imageUrl ->
+                                        viewModel.updateExerciseImage(exerciseId, title, imageUrl)
                                     }
                                 )
                             }
