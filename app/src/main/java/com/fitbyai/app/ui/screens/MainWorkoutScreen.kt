@@ -1160,7 +1160,7 @@ fun MuscleVolumeDashboardCard(tasks: List<WorkoutTaskEntity>) {
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
-                        text = "پنجره ۱۰ تا ۲۰ ست",
+                        text = "حجم علمی بر اساس سطح",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
@@ -1197,7 +1197,7 @@ fun MuscleVolumeDashboardCard(tasks: List<WorkoutTaskEntity>) {
 
 @Composable
 fun MuscleSetChip(muscle: String, sets: Int, modifier: Modifier = Modifier) {
-    val isOptimal = sets in 10..20
+    val isOptimal = sets in 4..22
     Surface(
         modifier = modifier,
         color = if (isOptimal) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface,
