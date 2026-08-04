@@ -617,13 +617,13 @@ fun SwipeableTaskCard(
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { dismissValue ->
             when (dismissValue) {
-                SwipeToDismissBoxValue.StartToEnd -> {
-                    // Swiped Right (RTL: Start -> End) -> Complete task
+                SwipeToDismissBoxValue.EndToStart -> {
+                    // Physical Right Swipe (RTL End -> Start) -> Complete task
                     onToggleStatus(task.taskId, task.completed)
                     false
                 }
-                SwipeToDismissBoxValue.EndToStart -> {
-                    // Swiped Left (RTL: End -> Start) -> Delete task
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    // Physical Left Swipe (RTL Start -> End) -> Delete task
                     onDeleteTask(task.taskId)
                     true
                 }
@@ -638,8 +638,8 @@ fun SwipeableTaskCard(
         enableDismissFromEndToStart = true,
         backgroundContent = {
             val direction = dismissState.dismissDirection
-            val isCompleteAction = direction == SwipeToDismissBoxValue.StartToEnd
-            val isDeleteAction = direction == SwipeToDismissBoxValue.EndToStart
+            val isRightSwipeDone = direction == SwipeToDismissBoxValue.EndToStart
+            val isLeftSwipeDelete = direction == SwipeToDismissBoxValue.StartToEnd
 
             Box(
                 modifier = Modifier
@@ -647,59 +647,84 @@ fun SwipeableTaskCard(
                     .clip(RoundedCornerShape(20.dp))
                     .background(
                         when {
-                            isCompleteAction -> Brush.horizontalGradient(
-                                colors = listOf(Color(0x334CAF50), Color(0xEE2E7D32))
+                            isRightSwipeDone -> Brush.horizontalGradient(
+                                colors = listOf(Color(0xEE2E7D32), Color(0x994CAF50), Color(0x3381C784))
                             )
-                            isDeleteAction -> Brush.horizontalGradient(
-                                colors = listOf(Color(0xEEC62828), Color(0x33EF5350))
+                            isLeftSwipeDelete -> Brush.horizontalGradient(
+                                colors = listOf(Color(0x33E57373), Color(0x99E53935), Color(0xEEC62828))
                             )
                             else -> Brush.horizontalGradient(colors = listOf(Color.Transparent, Color.Transparent))
                         }
                     )
-                    .padding(horizontal = 20.dp),
-                contentAlignment = if (isCompleteAction) Alignment.CenterStart else Alignment.CenterEnd
-            ) {
-                if (isCompleteAction) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            )
+        },
+        content = {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                content()
+
+                val direction = dismissState.dismissDirection
+                val isRightSwipeDone = direction == SwipeToDismissBoxValue.EndToStart
+                val isLeftSwipeDelete = direction == SwipeToDismissBoxValue.StartToEnd
+
+                if (isRightSwipeDone || isLeftSwipeDelete) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(
+                                if (isRightSwipeDone) {
+                                    Brush.horizontalGradient(
+                                        colors = listOf(Color(0xDD1B5E20), Color(0xEE2E7D32), Color(0x884CAF50))
+                                    )
+                                } else {
+                                    Brush.horizontalGradient(
+                                        colors = listOf(Color(0x88EF5350), Color(0xEEC62828), Color(0xDD8E0000))
+                                    )
+                                }
+                            )
+                            .padding(horizontal = 24.dp),
+                        contentAlignment = if (isRightSwipeDone) Alignment.CenterEnd else Alignment.CenterStart
                     ) {
-                        Icon(
-                            Icons.Default.CheckCircle,
-                            contentDescription = "انجام شد",
-                            tint = Color.White,
-                            modifier = Modifier.size(28.dp)
-                        )
-                        Text(
-                            text = "انجام شد",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-                } else if (isDeleteAction) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = "حذف",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "حذف",
-                            tint = Color.White,
-                            modifier = Modifier.size(28.dp)
-                        )
+                        if (isRightSwipeDone) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.CheckCircle,
+                                    contentDescription = "انجام شد",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                                Text(
+                                    text = "انجام شد",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color.White
+                                )
+                            }
+                        } else {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = "حذف",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Color.White
+                                )
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = "حذف",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
-        },
-        content = {
-            content()
         }
     )
 }
@@ -719,44 +744,56 @@ fun StackedExerciseTaskCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = (peekCount * 5).dp, start = (peekCount * 6).dp)
+            .padding(top = (peekCount * 8).dp, start = (peekCount * 8).dp)
     ) {
-        // Physical Deck Card Layers stacked behind active top card
+        // Physical Deck Card Layers stacked behind active top card with thick distinct primary border
         for (i in peekCount downTo 1) {
-            val offsetX = (-6 * i).dp
-            val offsetY = (-5 * i).dp
+            val offsetX = (-8 * i).dp
+            val offsetY = (-8 * i).dp
 
             Card(
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
+                border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)),
                 elevation = CardDefaults.cardElevation(defaultElevation = (2 - i).dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .offset(x = offsetX, y = offsetY)
             ) {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text(
-                        text = "ست ${activeTask.setNumber + i} از ${activeTask.totalSets}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "در لایه زیرین",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = activeTask.title,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                        Surface(
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = "ست ${activeTask.setNumber + i} از ${activeTask.totalSets} (در صف)",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(100.dp))
                 }
-                Spacer(modifier = Modifier.height(130.dp))
             }
         }
 
