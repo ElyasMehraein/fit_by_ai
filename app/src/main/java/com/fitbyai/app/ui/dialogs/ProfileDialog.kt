@@ -45,12 +45,24 @@ fun ProfileDialog(
     var goal by remember { mutableStateOf(currentProfile?.goal ?: "عضله‌سازی (حجم)") }
     var baseWeight by remember { mutableStateOf(currentProfile?.baseWeight ?: "") }
     var baseWaist by remember { mutableStateOf(currentProfile?.baseWaist ?: "") }
-    var experience by remember { mutableStateOf(currentProfile?.experience ?: "متوسط (6 ماه تا 2 سال)") }
-    var daysPerWeek by remember { mutableStateOf(currentProfile?.daysPerWeek ?: "4 روز در هفته") }
+    var experience by remember {
+        mutableStateOf(
+            currentProfile?.experience?.filter { it.isDigit() }?.ifEmpty { "6" } ?: "6"
+        )
+    }
+    var daysPerWeek by remember {
+        mutableStateOf(
+            currentProfile?.daysPerWeek?.filter { it.isDigit() }?.ifEmpty { "4" } ?: "4"
+        )
+    }
     var equipment by remember { mutableStateOf(currentProfile?.equipment ?: "") }
     var limitations by remember { mutableStateOf(currentProfile?.limitations ?: "") }
     var targetWeight by remember { mutableStateOf(currentProfile?.targetWeight ?: "") }
-    var sessionDuration by remember { mutableStateOf(currentProfile?.sessionDuration ?: "60 دقیقه") }
+    var sessionDuration by remember {
+        mutableStateOf(
+            currentProfile?.sessionDuration?.filter { it.isDigit() }?.ifEmpty { "60" } ?: "60"
+        )
+    }
     var activityLevel by remember { mutableStateOf(currentProfile?.activityLevel ?: "کم‌تحرک (کارمندی)") }
     var healthConditions by remember { mutableStateOf(currentProfile?.healthConditions ?: "") }
 
@@ -246,7 +258,8 @@ fun ProfileDialog(
                             leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null) },
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(16.dp),
-                            singleLine = true
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                         )
                     }
 
@@ -260,25 +273,29 @@ fun ProfileDialog(
                         singleLine = true
                     )
 
-                    SelectAllOutlinedTextField(
-                        value = experience,
-                        onValueChange = { experience = it },
-                        label = { Text("سابقه تمرین") },
-                        leadingIcon = { Icon(Icons.Default.FitnessCenter, contentDescription = null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        singleLine = true
-                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        SelectAllOutlinedTextField(
+                            value = experience,
+                            onValueChange = { experience = it },
+                            label = { Text("سابقه تمرین (ماه)") },
+                            leadingIcon = { Icon(Icons.Default.FitnessCenter, contentDescription = null) },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(16.dp),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        )
 
-                    SelectAllOutlinedTextField(
-                        value = sessionDuration,
-                        onValueChange = { sessionDuration = it },
-                        label = { Text("زمان هر جلسه تمرین (دقیقه)") },
-                        leadingIcon = { Icon(Icons.Default.Timer, contentDescription = null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        singleLine = true
-                    )
+                        SelectAllOutlinedTextField(
+                            value = sessionDuration,
+                            onValueChange = { sessionDuration = it },
+                            label = { Text("زمان هر جلسه (دقیقه)") },
+                            leadingIcon = { Icon(Icons.Default.Timer, contentDescription = null) },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(16.dp),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        )
+                    }
 
                     // Daily Activity Level Selection Section (FilterChips)
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {

@@ -101,9 +101,9 @@ class WorkoutRepository(private val dao: WorkoutDao) {
 - قد: ${profile?.height ?: "-"} cm | سن: ${profile?.age ?: "-"} | جنسیت: ${profile?.gender ?: "-"}
 - وزن پایه: ${profile?.baseWeight ?: "-"} kg | دور کمر پایه: ${profile?.baseWaist ?: "-"} cm | وزن هدف: ${profile?.targetWeight?.ifEmpty { "-" } ?: "-"} kg
 - هدف اصلی: ${profile?.goal ?: "-"}
-- سابقه تمرینی: ${profile?.experience ?: "-"}
-- روزهای تمرین در هفته: ${profile?.daysPerWeek ?: "-"}
-- زمان در دسترس هر جلسه: ${profile?.sessionDuration?.ifEmpty { "-" } ?: "-"}
+- سابقه تمرینی: ${profile?.experience?.let { if (it.isNotBlank() && it.all { c -> c.isDigit() }) "$it ماه" else it } ?: "-"}
+- روزهای تمرین در هفته: ${profile?.daysPerWeek?.let { if (it.isNotBlank() && it.all { c -> c.isDigit() }) "$it روز در هفته" else it } ?: "-"}
+- زمان در دسترس هر جلسه: ${profile?.sessionDuration?.let { if (it.isNotBlank() && it.all { c -> c.isDigit() }) "$it دقیقه" else it } ?: "-"}
 - سطح فعالیت روزمره: ${profile?.activityLevel?.ifEmpty { "-" } ?: "-"}
 - تجهیزات در دسترس: ${profile?.equipment ?: "-"}
 - آسیب‌های قبلی و محدودیت‌ها: ${profile?.limitations ?: "-"}
