@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.fitbyai.app.data.WorkoutTaskEntity
+import com.fitbyai.app.i18n.LocalAppStrings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,6 +29,9 @@ fun SwipeableTaskCard(
     onDeleteTask: (taskId: String) -> Unit,
     content: @Composable () -> Unit
 ) {
+    val strings = LocalAppStrings.current
+    val currentDirection = LocalLayoutDirection.current
+
     // Isolated key ensures each task has a completely fresh dismissState starting at Settled.
     key(task.taskId) {
         // Force LTR for the SwipeToDismissBox gesture engine so physical drag direction
@@ -103,19 +107,19 @@ fun SwipeableTaskCard(
                             contentAlignment = if (isRightSwipeDone) Alignment.CenterStart else Alignment.CenterEnd
                         ) {
                             if (isRightSwipeDone) {
-                                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                                CompositionLocalProvider(LocalLayoutDirection provides currentDirection) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Icon(
                                             Icons.Default.CheckCircle,
-                                            contentDescription = "انجام شد",
+                                            contentDescription = strings.markComplete,
                                             tint = Color.White,
                                             modifier = Modifier.size(32.dp)
                                         )
                                         Text(
-                                            text = "انجام شد",
+                                            text = strings.markComplete,
                                             style = MaterialTheme.typography.titleLarge,
                                             fontWeight = FontWeight.ExtraBold,
                                             color = Color.White
@@ -123,20 +127,20 @@ fun SwipeableTaskCard(
                                     }
                                 }
                             } else if (isLeftSwipeDelete) {
-                                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                                CompositionLocalProvider(LocalLayoutDirection provides currentDirection) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Text(
-                                            text = "حذف",
+                                            text = strings.deleteSet,
                                             style = MaterialTheme.typography.titleLarge,
                                             fontWeight = FontWeight.ExtraBold,
                                             color = Color.White
                                         )
                                         Icon(
                                             Icons.Default.Delete,
-                                            contentDescription = "حذف",
+                                            contentDescription = strings.deleteSet,
                                             tint = Color.White,
                                             modifier = Modifier.size(32.dp)
                                         )
@@ -146,7 +150,7 @@ fun SwipeableTaskCard(
                         }
                     },
                     content = {
-                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                        CompositionLocalProvider(LocalLayoutDirection provides currentDirection) {
                             content()
                         }
                     }

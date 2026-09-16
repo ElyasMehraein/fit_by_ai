@@ -1,5 +1,6 @@
 package com.fitbyai.app.ui.dialogs
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,26 +12,29 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.fitbyai.app.data.UserProfileEntity
 import com.fitbyai.app.data.WeeklyHistoryEntity
+import com.fitbyai.app.i18n.AppLanguage
+import com.fitbyai.app.i18n.LocalAppStrings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileDialog(
     currentProfile: UserProfileEntity?,
     weeklyHistory: List<WeeklyHistoryEntity> = emptyList(),
+    currentLanguage: AppLanguage = AppLanguage.DEFAULT,
+    onLanguageChanged: (AppLanguage) -> Unit = {},
     onDismiss: () -> Unit,
     onSave: (
         height: String, age: String, gender: String, goal: String,
@@ -40,10 +44,12 @@ fun ProfileDialog(
     ) -> Unit,
     onResetData: () -> Unit = {}
 ) {
+    val strings = LocalAppStrings.current
+
     var height by remember { mutableStateOf(currentProfile?.height ?: "") }
     var age by remember { mutableStateOf(currentProfile?.age ?: "") }
-    var gender by remember { mutableStateOf(currentProfile?.gender?.ifEmpty { "مرد" } ?: "مرد") }
-    var goal by remember { mutableStateOf(currentProfile?.goal ?: "عضله‌سازی (حجم)") }
+    var gender by remember { mutableStateOf(currentProfile?.gender?.ifEmpty { "male" } ?: "male") }
+    var goal by remember { mutableStateOf(currentProfile?.goal ?: "Hypertrophy") }
     var baseWeight by remember { mutableStateOf(currentProfile?.baseWeight ?: "") }
     var baseWaist by remember { mutableStateOf(currentProfile?.baseWaist ?: "") }
     var experience by remember {
@@ -64,10 +70,11 @@ fun ProfileDialog(
             currentProfile?.sessionDuration?.filter { it.isDigit() }?.ifEmpty { "60" } ?: "60"
         )
     }
-    var activityLevel by remember { mutableStateOf(currentProfile?.activityLevel ?: "کم‌تحرک (کارمندی)") }
+    var activityLevel by remember { mutableStateOf(currentProfile?.activityLevel ?: "Sedentary") }
     var healthConditions by remember { mutableStateOf(currentProfile?.healthConditions ?: "") }
 
     var selectedTab by remember { mutableStateOf(0) } // 0: Specs Form, 1: Progress History, 2: Settings & Reset
+    var showResetConfirm by remember { mutableStateOf(false) }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -78,467 +85,497 @@ fun ProfileDialog(
         dragHandle = { BottomSheetDefaults.DragHandle() },
         shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
     ) {
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 8.dp)
-                    .padding(bottom = 32.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 8.dp)
+                .padding(bottom = 32.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Person,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = "پروفایل ورزشی شما",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = strings.profileTitle,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
+            }
 
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                TabRow(
+                    selectedTabIndex = selectedTab,
+                    containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                    indicator = {},
+                    divider = {}
+                ) {
+                    Tab(
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        text = {
+                            Text(
+                                strings.tabSpecs,
+                                fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        },
+                        icon = { Icon(Icons.Default.EditNote, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                    )
+                    Tab(
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        text = {
+                            Text(
+                                strings.tabHistory,
+                                fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        },
+                        icon = { Icon(Icons.Default.ShowChart, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                    )
+                    Tab(
+                        selected = selectedTab == 2,
+                        onClick = { selectedTab = 2 },
+                        text = {
+                            Text(
+                                strings.tabSettings,
+                                fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Normal,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        },
+                        icon = { Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                    )
+                }
+            }
+
+            if (selectedTab == 0) {
+                // TAB 0: Profile Specifications Form
                 Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f),
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    TabRow(
-                        selectedTabIndex = selectedTab,
-                        containerColor = androidx.compose.ui.graphics.Color.Transparent,
-                        indicator = {},
-                        divider = {}
+                    Text(
+                        text = strings.profileIntroNotice,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(14.dp)
+                    )
+                }
+
+                // Gender Selection Section
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = strings.genderLabel,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Tab(
-                            selected = selectedTab == 0,
-                            onClick = { selectedTab = 0 },
-                            text = {
-                                Text(
-                                    "مشخصات و فرم",
-                                    fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
-                                    style = MaterialTheme.typography.labelSmall
-                                )
-                            },
-                            icon = { Icon(Icons.Default.EditNote, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                        val isMale = gender == "male" || gender == "مرد"
+                        val isFemale = gender == "female" || gender == "زن"
+
+                        FilterChip(
+                            selected = isMale,
+                            onClick = { gender = "male" },
+                            label = { Text(strings.genderMale, modifier = Modifier.padding(vertical = 4.dp)) },
+                            leadingIcon = if (isMale) {
+                                { Icon(Icons.Default.Check, contentDescription = null) }
+                            } else null,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
                         )
-                        Tab(
-                            selected = selectedTab == 1,
-                            onClick = { selectedTab = 1 },
-                            text = {
-                                Text(
-                                    "پیشرفت تمرینی",
-                                    fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
-                                    style = MaterialTheme.typography.labelSmall
-                                )
-                            },
-                            icon = { Icon(Icons.Default.ShowChart, contentDescription = null, modifier = Modifier.size(18.dp)) }
-                        )
-                        Tab(
-                            selected = selectedTab == 2,
-                            onClick = { selectedTab = 2 },
-                            text = {
-                                Text(
-                                    "تنظیمات و مدیریت",
-                                    fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Normal,
-                                    style = MaterialTheme.typography.labelSmall
-                                )
-                            },
-                            icon = { Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                        FilterChip(
+                            selected = isFemale,
+                            onClick = { gender = "female" },
+                            label = { Text(strings.genderFemale, modifier = Modifier.padding(vertical = 4.dp)) },
+                            leadingIcon = if (isFemale) {
+                                { Icon(Icons.Default.Check, contentDescription = null) }
+                            } else null,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
                         )
                     }
                 }
 
-                if (selectedTab == 0) {
-                    // TAB 0: Profile Specifications Form
-                    Surface(
-                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f),
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SelectAllOutlinedTextField(
+                        value = height,
+                        onValueChange = { height = it },
+                        label = { Text(strings.heightLabel) },
+                        leadingIcon = { Icon(Icons.Default.Height, contentDescription = null) },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
                         shape = RoundedCornerShape(16.dp),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                    SelectAllOutlinedTextField(
+                        value = age,
+                        onValueChange = { age = it },
+                        label = { Text(strings.ageLabel) },
+                        leadingIcon = { Icon(Icons.Default.Cake, contentDescription = null) },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SelectAllOutlinedTextField(
+                        value = baseWeight,
+                        onValueChange = { baseWeight = it },
+                        label = { Text(strings.baseWeightLabel) },
+                        leadingIcon = { Icon(Icons.Default.MonitorWeight, contentDescription = null) },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                    SelectAllOutlinedTextField(
+                        value = targetWeight,
+                        onValueChange = { targetWeight = it },
+                        label = { Text(strings.targetWeightLabel) },
+                        leadingIcon = { Icon(Icons.Default.Flag, contentDescription = null) },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SelectAllOutlinedTextField(
+                        value = baseWaist,
+                        onValueChange = { baseWaist = it },
+                        label = { Text(strings.baseWaistLabel) },
+                        leadingIcon = { Icon(Icons.Default.Straighten, contentDescription = null) },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                    SelectAllOutlinedTextField(
+                        value = daysPerWeek,
+                        onValueChange = { daysPerWeek = it },
+                        label = { Text(strings.daysPerWeekLabel) },
+                        leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null) },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(16.dp),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                }
+
+                SelectAllOutlinedTextField(
+                    value = goal,
+                    onValueChange = { goal = it },
+                    label = { Text(strings.goalLabel) },
+                    leadingIcon = { Icon(Icons.Default.EmojiEvents, contentDescription = null) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    singleLine = true
+                )
+
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SelectAllOutlinedTextField(
+                        value = experience,
+                        onValueChange = { experience = it },
+                        label = { Text(strings.experienceLabel) },
+                        leadingIcon = { Icon(Icons.Default.FitnessCenter, contentDescription = null) },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(16.dp),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+
+                    SelectAllOutlinedTextField(
+                        value = sessionDuration,
+                        onValueChange = { sessionDuration = it },
+                        label = { Text(strings.sessionDurationLabel) },
+                        leadingIcon = { Icon(Icons.Default.Timer, contentDescription = null) },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(16.dp),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = strings.activityLevelLabel,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(
-                            text = "این اطلاعات به طور کامل در پرامپت هوش مصنوعی قرار گرفته تا برنامه دقیقاً بر اساس فیزیک، اهداف و شرایط زندگی شما طراحی شود.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                            modifier = Modifier.padding(14.dp)
+                        val options = listOf(
+                            strings.activitySedentary,
+                            strings.activityModerate,
+                            strings.activityActive
                         )
-                    }
-
-                    // Gender Selection Section
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
-                            text = "جنسیت",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
+                        options.forEach { optionText ->
+                            val isSelected = activityLevel == optionText || (activityLevel.isNotBlank() && optionText.contains(activityLevel.take(4)))
                             FilterChip(
-                                selected = gender == "مرد",
-                                onClick = { gender = "مرد" },
-                                label = { Text("مرد 👨", modifier = Modifier.padding(vertical = 4.dp)) },
-                                leadingIcon = if (gender == "مرد") {
-                                    { Icon(Icons.Default.Check, contentDescription = null) }
-                                } else null,
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                            FilterChip(
-                                selected = gender == "زن",
-                                onClick = { gender = "زن" },
-                                label = { Text("زن 👩", modifier = Modifier.padding(vertical = 4.dp)) },
-                                leadingIcon = if (gender == "زن") {
-                                    { Icon(Icons.Default.Check, contentDescription = null) }
+                                selected = isSelected,
+                                onClick = { activityLevel = optionText },
+                                label = { Text(optionText.take(12), style = MaterialTheme.typography.labelSmall) },
+                                leadingIcon = if (isSelected) {
+                                    { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp)) }
                                 } else null,
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(12.dp)
                             )
                         }
                     }
+                }
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        SelectAllOutlinedTextField(
-                            value = height,
-                            onValueChange = { height = it },
-                            label = { Text("قد (cm)") },
-                            leadingIcon = { Icon(Icons.Default.Height, contentDescription = null) },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            shape = RoundedCornerShape(16.dp),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                        )
-                        SelectAllOutlinedTextField(
-                            value = age,
-                            onValueChange = { age = it },
-                            label = { Text("سن") },
-                            leadingIcon = { Icon(Icons.Default.Cake, contentDescription = null) },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            shape = RoundedCornerShape(16.dp),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                        )
-                    }
+                SelectAllOutlinedTextField(
+                    value = equipment,
+                    onValueChange = { equipment = it },
+                    label = { Text(strings.equipmentLabel) },
+                    leadingIcon = { Icon(Icons.Default.Build, contentDescription = null) },
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        SelectAllOutlinedTextField(
-                            value = baseWeight,
-                            onValueChange = { baseWeight = it },
-                            label = { Text("وزن فعلی (kg)") },
-                            leadingIcon = { Icon(Icons.Default.MonitorWeight, contentDescription = null) },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            shape = RoundedCornerShape(16.dp),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                        )
-                        SelectAllOutlinedTextField(
-                            value = targetWeight,
-                            onValueChange = { targetWeight = it },
-                            label = { Text("وزن هدف (kg)") },
-                            leadingIcon = { Icon(Icons.Default.Flag, contentDescription = null) },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            shape = RoundedCornerShape(16.dp),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                        )
-                    }
+                SelectAllOutlinedTextField(
+                    value = limitations,
+                    onValueChange = { limitations = it },
+                    label = { Text(strings.limitationsLabel) },
+                    leadingIcon = { Icon(Icons.Default.MedicalServices, contentDescription = null) },
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        SelectAllOutlinedTextField(
-                            value = baseWaist,
-                            onValueChange = { baseWaist = it },
-                            label = { Text("دور شکم (cm)") },
-                            leadingIcon = { Icon(Icons.Default.Straighten, contentDescription = null) },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            shape = RoundedCornerShape(16.dp),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                        )
-                        SelectAllOutlinedTextField(
-                            value = daysPerWeek,
-                            onValueChange = { daysPerWeek = it },
-                            label = { Text("روزهای تمرین در هفته") },
-                            leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null) },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(16.dp),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                        )
-                    }
+                SelectAllOutlinedTextField(
+                    value = healthConditions,
+                    onValueChange = { healthConditions = it },
+                    label = { Text(strings.healthConditionsLabel) },
+                    leadingIcon = { Icon(Icons.Default.Healing, contentDescription = null) },
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-                    SelectAllOutlinedTextField(
-                        value = goal,
-                        onValueChange = { goal = it },
-                        label = { Text("هدف اصلی ورزشی") },
-                        leadingIcon = { Icon(Icons.Default.EmojiEvents, contentDescription = null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        singleLine = true
+                Button(
+                    onClick = {
+                        onSave(
+                            height, age, gender, goal, baseWeight, baseWaist,
+                            experience, daysPerWeek, equipment, limitations,
+                            targetWeight, sessionDuration, activityLevel, healthConditions
+                        )
+                        onDismiss()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .padding(top = 8.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     )
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        SelectAllOutlinedTextField(
-                            value = experience,
-                            onValueChange = { experience = it },
-                            label = { Text("سابقه تمرین (سال)") },
-                            leadingIcon = { Icon(Icons.Default.FitnessCenter, contentDescription = null) },
+                ) {
+                    Text(
+                        strings.saveProfileBtn,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            } else if (selectedTab == 1) {
+                // TAB 1: Workout Progress History
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Surface(
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(16.dp),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                        )
-
-                        SelectAllOutlinedTextField(
-                            value = sessionDuration,
-                            onValueChange = { sessionDuration = it },
-                            label = { Text("زمان هر جلسه (دقیقه)") },
-                            leadingIcon = { Icon(Icons.Default.Timer, contentDescription = null) },
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            shape = RoundedCornerShape(20.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(strings.tabHistory, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text("${weeklyHistory.size} ${strings.weekN(weeklyHistory.size)}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                            }
+                        }
+                        Surface(
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(16.dp),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                        )
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                            shape = RoundedCornerShape(20.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(strings.baseWeightLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f))
+                                Spacer(modifier = Modifier.height(4.dp))
+                                val lastW = if (weeklyHistory.isNotEmpty()) "${weeklyHistory.last().weight} kg" else "-"
+                                Text(lastW, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                            }
+                        }
                     }
 
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
-                            text = "سطح فعالیت روزمره",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    if (weeklyHistory.isEmpty()) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.4f),
+                            shape = RoundedCornerShape(20.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            val options = listOf(
-                                "کم‌تحرک" to "کم‌تحرک (پشت‌میز نشینی)",
-                                "نیمه‌فعال" to "نیمه‌فعال (تحرک متوسط)",
-                                "پرتحرک" to "پرتحرک (فعالیت سنگین)"
-                            )
-                            options.forEach { (shortLabel, fullText) ->
-                                val isSelected = activityLevel == fullText || activityLevel.startsWith(shortLabel)
-                                FilterChip(
-                                    selected = isSelected,
-                                    onClick = { activityLevel = fullText },
-                                    label = { Text(shortLabel, style = MaterialTheme.typography.labelSmall) },
-                                    leadingIcon = if (isSelected) {
-                                        { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp)) }
-                                    } else null,
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(12.dp)
+                            Column(
+                                modifier = Modifier.padding(32.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(Icons.Default.History, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(48.dp))
+                                Text(
+                                    text = strings.emptyHistoryNotice,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = FontWeight.SemiBold
                                 )
                             }
                         }
-                    }
-
-                    SelectAllOutlinedTextField(
-                        value = equipment,
-                        onValueChange = { equipment = it },
-                        label = { Text("تجهیزات در دسترس") },
-                        leadingIcon = { Icon(Icons.Default.Build, contentDescription = null) },
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    SelectAllOutlinedTextField(
-                        value = limitations,
-                        onValueChange = { limitations = it },
-                        label = { Text("محدودیت‌ها و آسیب‌های قبلی") },
-                        leadingIcon = { Icon(Icons.Default.MedicalServices, contentDescription = null) },
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    SelectAllOutlinedTextField(
-                        value = healthConditions,
-                        onValueChange = { healthConditions = it },
-                        label = { Text("بیماری خاص یا داروهای مصرفی (در صورت وجود)") },
-                        leadingIcon = { Icon(Icons.Default.Healing, contentDescription = null) },
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Button(
-                        onClick = {
-                            onSave(
-                                height, age, gender, goal, baseWeight, baseWaist,
-                                experience, daysPerWeek, equipment, limitations,
-                                targetWeight, sessionDuration, activityLevel, healthConditions
-                            )
-                            onDismiss()
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp)
-                            .padding(top = 8.dp),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        )
-                    ) {
-                        Text(
-                            "ذخیره پروفایل ورزشی",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                } else if (selectedTab == 1) {
-                    // TAB 1: Workout Progress History (Moved from HistoryDialog)
-                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Surface(
-                                modifier = Modifier.weight(1f),
-                                color = MaterialTheme.colorScheme.primaryContainer,
-                                shape = RoundedCornerShape(20.dp)
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(16.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            weeklyHistory.forEachIndexed { index, item ->
+                                Surface(
+                                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                    shape = RoundedCornerShape(20.dp),
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Text("کل هفته‌ها", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text("${weeklyHistory.size} هفته", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                                }
-                            }
-                            Surface(
-                                modifier = Modifier.weight(1f),
-                                color = MaterialTheme.colorScheme.secondaryContainer,
-                                shape = RoundedCornerShape(20.dp)
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(16.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Text("آخرین ثبت وزن", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f))
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    val lastW = if (weeklyHistory.isNotEmpty()) "${weeklyHistory.last().weight} kg" else "-"
-                                    Text(lastW, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                                    Column(
+                                        modifier = Modifier.padding(16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Surface(
+                                                color = MaterialTheme.colorScheme.primary,
+                                                shape = RoundedCornerShape(10.dp)
+                                            ) {
+                                                Text(
+                                                    strings.weekN(item.week),
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    color = MaterialTheme.colorScheme.onPrimary,
+                                                    fontWeight = FontWeight.Bold,
+                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                                )
+                                            }
+                                            Text(item.date, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+
+                                        Text(
+                                            strings.historyWeightWaist(item.weight, item.waist),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Text(
+                                            strings.historySetsCompleted(item.completedSets, item.totalSets, item.completionRate),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                 }
                             }
                         }
-
-                        if (weeklyHistory.isEmpty()) {
-                            Surface(
-                                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.4f),
-                                shape = RoundedCornerShape(20.dp),
-                                modifier = Modifier.fillMaxWidth()
+                    }
+                }
+            } else {
+                // TAB 2: Settings, Language Selection & Data Reset Management
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    // Language Selection Section
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(20.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Column(
-                                    modifier = Modifier.padding(32.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Icon(Icons.Default.History, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(48.dp))
-                                    Text(
-                                        text = "هنوز تاریخچه پیشرفتی ثبت نشده است",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Text(
-                                        text = "پس از پایان اولین هفته، روند پیشرفت فیزیکی و تمرینی شما در این بخش نمایش داده خواهد شد.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        textAlign = TextAlign.Center
-                                    )
-                                }
+                                Icon(Icons.Default.Language, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                Text(
+                                    text = strings.languageSectionTitle,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
-                        } else {
-                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                weeklyHistory.forEachIndexed { index, item ->
-                                    val prevItem = if (index > 0) weeklyHistory[index - 1] else null
-                                    val weightDelta = if (prevItem != null) item.weight - prevItem.weight else null
-                                    val waistDelta = if (prevItem != null) item.waist - prevItem.waist else null
+                            Text(
+                                text = strings.languageSectionDesc,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
 
-                                    Surface(
-                                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                        shape = RoundedCornerShape(20.dp),
-                                        modifier = Modifier.fillMaxWidth()
+                            // Language Chips Grid
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                val languages = AppLanguage.entries.toList()
+                                languages.chunked(2).forEach { rowLanguages ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        Column(
-                                            modifier = Modifier.padding(16.dp),
-                                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.SpaceBetween,
-                                                verticalAlignment = Alignment.CenterVertically
+                                        rowLanguages.forEach { lang ->
+                                            val isSelected = lang == currentLanguage
+                                            Surface(
+                                                onClick = { onLanguageChanged(lang) },
+                                                shape = RoundedCornerShape(14.dp),
+                                                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                                                border = BorderStroke(
+                                                    if (isSelected) 2.dp else 1.dp,
+                                                    if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                                                ),
+                                                modifier = Modifier.weight(1f)
                                             ) {
-                                                Surface(
-                                                    color = MaterialTheme.colorScheme.primary,
-                                                    shape = RoundedCornerShape(10.dp)
+                                                Row(
+                                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                                 ) {
+                                                    Text(lang.flag, fontSize = 20.sp)
                                                     Text(
-                                                        "هفته ${item.week}",
+                                                        text = lang.nativeName,
                                                         style = MaterialTheme.typography.labelMedium,
-                                                        color = MaterialTheme.colorScheme.onPrimary,
-                                                        fontWeight = FontWeight.Bold,
-                                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
                                                     )
                                                 }
-                                                Text(item.date, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                            }
-
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.SpaceBetween,
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Column {
-                                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                                        Text("وزن: ${item.weight} kg", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                                                        if (weightDelta != null && weightDelta != 0.0) {
-                                                            val deltaText = if (weightDelta > 0) "+${String.format("%.1f", weightDelta)}" else String.format("%.1f", weightDelta)
-                                                            Surface(
-                                                                color = if (weightDelta < 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.errorContainer,
-                                                                shape = RoundedCornerShape(6.dp)
-                                                            ) {
-                                                                Text(
-                                                                    deltaText,
-                                                                    style = MaterialTheme.typography.labelSmall,
-                                                                    fontWeight = FontWeight.Bold,
-                                                                    color = if (weightDelta < 0) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onErrorContainer,
-                                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                                                )
-                                                            }
-                                                        }
-                                                    }
-                                                    Spacer(modifier = Modifier.height(2.dp))
-                                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                                        Text("شکم: ${item.waist} cm", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                        if (waistDelta != null && waistDelta != 0.0) {
-                                                            val waistText = if (waistDelta > 0) "+${String.format("%.1f", waistDelta)}" else String.format("%.1f", waistDelta)
-                                                            Text("($waistText)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                                                        }
-                                                    }
-                                                    if (item.jointPain.isNotBlank() && item.jointPain != "بدون درد مفصلی") {
-                                                        Spacer(modifier = Modifier.height(2.dp))
-                                                        Text("درد مفصلی: ${item.jointPain}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
-                                                    }
-                                                    if (item.muscleSoreness.isNotBlank() && item.muscleSoreness != "بدون کوفتگی") {
-                                                        Spacer(modifier = Modifier.height(2.dp))
-                                                        Text("کوفتگی: ${item.muscleSoreness}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
-                                                    }
-                                                }
-                                                Text("${item.completionRate}% انجام", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                                             }
                                         }
                                     }
@@ -546,56 +583,76 @@ fun ProfileDialog(
                             }
                         }
                     }
-                } else {
-                    // TAB 2: Settings & Data Reset Management
-                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            shape = RoundedCornerShape(20.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(20.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                ) {
-                                    Icon(Icons.Default.Storage, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                    Text(
-                                        text = "مدیریت داده‌های اپلیکیشن",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                                Text(
-                                    text = "در صورت تغییر برنامه یا پاکسازی کامل داده‌های برنامه تمرینی فعلی و تاریخچه‌ها می‌توانید از دکمه زیر استفاده کنید.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
 
-                                OutlinedButton(
-                                    onClick = {
-                                        onResetData()
-                                        onDismiss()
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(48.dp),
-                                    shape = RoundedCornerShape(16.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                                ) {
-                                    Icon(Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("پاکسازی و ریست کامل تمامی تمرین‌ها و تاریخچه‌ها", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                                }
+                    // Data Reset Section
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(20.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Icon(Icons.Default.Storage, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                                Text(
+                                    text = strings.resetDataTitle,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Text(
+                                text = strings.resetDataDesc,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+
+                            OutlinedButton(
+                                onClick = { showResetConfirm = true },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                            ) {
+                                Icon(Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(strings.resetDataBtn, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
                 }
             }
         }
+    }
+
+    if (showResetConfirm) {
+        AlertDialog(
+            onDismissRequest = { showResetConfirm = false },
+            title = { Text(strings.resetConfirmTitle, fontWeight = FontWeight.Bold) },
+            text = { Text(strings.resetConfirmMsg) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onResetData()
+                        showResetConfirm = false
+                        onDismiss()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(strings.confirmResetBtn)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetConfirm = false }) {
+                    Text(strings.cancelBtn)
+                }
+            }
+        )
     }
 }
 

@@ -96,16 +96,22 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
     fun generatePrompt(
         weight: String, waist: String, sleep: String,
         energy: Int, rpe: Int, pain: String, feedback: String,
-        muscleSoreness: String = "نرمال", jointPain: String = "بدون درد مفصلی"
+        muscleSoreness: String = "نرمال", jointPain: String = "بدون درد مفصلی",
+        language: com.fitbyai.app.i18n.AppLanguage = com.fitbyai.app.i18n.AppLanguage.DEFAULT
     ) {
         viewModelScope.launch {
             if (weight.isBlank() || waist.isBlank()) {
-                _uiState.update { it.copy(errorMessage = "لطفاً فیلدهای وزن و دور شکم را پر کنید.") }
+                val errMsg = if (language == com.fitbyai.app.i18n.AppLanguage.PERSIAN) {
+                    "لطفاً فیلدهای وزن و دور شکم را پر کنید."
+                } else {
+                    "Please fill in both weight and waist fields."
+                }
+                _uiState.update { it.copy(errorMessage = errMsg) }
                 return@launch
             }
             _uiState.update { it.copy(errorMessage = null) }
             val prompt = repository.generateAiPrompt(
-                weight, waist, sleep, energy, rpe, pain, feedback, muscleSoreness, jointPain
+                weight, waist, sleep, energy, rpe, pain, feedback, muscleSoreness, jointPain, language
             )
             _uiState.update { it.copy(generatedPrompt = prompt) }
         }

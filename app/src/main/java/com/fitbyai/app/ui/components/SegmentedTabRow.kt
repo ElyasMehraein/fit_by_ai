@@ -9,16 +9,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.fitbyai.app.i18n.LocalAppStrings
 
 @Composable
 fun M3SegmentedTabRow(
     selectedTab: String,
     queueCount: Int,
     doneCount: Int,
-    onTabSelected: (String) -> Unit
+    onTabSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current
+
     Surface(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 4.dp),
         shape = RoundedCornerShape(20.dp),
@@ -31,7 +35,7 @@ fun M3SegmentedTabRow(
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             SegmentedButtonOption(
-                title = "در صف انجام ($queueCount)",
+                title = strings.inQueue(queueCount),
                 selected = selectedTab == "queue",
                 modifier = Modifier.weight(1f)
             ) {
@@ -39,7 +43,7 @@ fun M3SegmentedTabRow(
             }
 
             SegmentedButtonOption(
-                title = "تکمیل شده ($doneCount)",
+                title = strings.completed(doneCount),
                 selected = selectedTab == "done",
                 modifier = Modifier.weight(1f)
             ) {

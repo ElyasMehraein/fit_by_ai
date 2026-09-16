@@ -15,9 +15,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.fitbyai.app.i18n.LocalAppStrings
 
 @Composable
 fun NoProfileStateCard(onOpenProfile: () -> Unit) {
+    val strings = LocalAppStrings.current
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -49,7 +52,7 @@ fun NoProfileStateCard(onOpenProfile: () -> Unit) {
                 }
 
                 Text(
-                    text = "هنوز مشخصات ورزشی ثبت نشده است",
+                    text = strings.noProfileTitle,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -57,7 +60,7 @@ fun NoProfileStateCard(onOpenProfile: () -> Unit) {
                 )
 
                 Text(
-                    text = "برای تولید برنامه تمرینی اختصاصی و هوشمند، ابتدا مشخصات ورزشی و اهداف خود را ثبت کنید.",
+                    text = strings.noProfileDesc,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -71,7 +74,7 @@ fun NoProfileStateCard(onOpenProfile: () -> Unit) {
                 ) {
                     Icon(Icons.Default.Edit, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("ثبت مشخصات و پروفایل ورزشی ✍️", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    Text(strings.openProfileBtn, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -80,6 +83,8 @@ fun NoProfileStateCard(onOpenProfile: () -> Unit) {
 
 @Composable
 fun NoWorkoutProgramStateCard(onGetStarted: () -> Unit) {
+    val strings = LocalAppStrings.current
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -111,7 +116,7 @@ fun NoWorkoutProgramStateCard(onGetStarted: () -> Unit) {
                 }
 
                 Text(
-                    text = "هنوز برنامه‌ای تنظیم نشده است",
+                    text = strings.noProgramTitle,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -119,7 +124,7 @@ fun NoWorkoutProgramStateCard(onGetStarted: () -> Unit) {
                 )
 
                 Text(
-                    text = "پروفایل ورزشی شما ثبت شده است. اکنون می‌توانید اولین برنامه تمرینی اختصاصی خود را دریافت کنید.",
+                    text = strings.noProgramDesc,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -133,7 +138,7 @@ fun NoWorkoutProgramStateCard(onGetStarted: () -> Unit) {
                 ) {
                     Icon(Icons.Default.AutoAwesome, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("دریافت اولین برنامه تمرینی 🚀", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    Text(strings.getStartedBtn, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 }
             }
         }

@@ -3,17 +3,20 @@ package com.fitbyai.app.ui.components
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.SportsGymnastics
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,10 +24,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fitbyai.app.data.WorkoutTaskEntity
+import com.fitbyai.app.i18n.LocalAppStrings
 import com.fitbyai.app.ui.WorkoutUiState
 
 @Composable
 fun HeroProgressCard(uiState: WorkoutUiState, onOpenWeeklyReview: () -> Unit) {
+    val strings = LocalAppStrings.current
     val doneCount = uiState.tasks.count { it.completed }
     val totalCount = uiState.tasks.size
     val progressFraction = if (totalCount > 0) doneCount.toFloat() / totalCount else 0f
@@ -33,6 +38,22 @@ fun HeroProgressCard(uiState: WorkoutUiState, onOpenWeeklyReview: () -> Unit) {
     val currentWeekNumber = uiState.history.size + 1
     val remainingMs = if (uiState.deadlineTimestamp != null) uiState.deadlineTimestamp - System.currentTimeMillis() else 0L
     val isTimeRemaining = uiState.deadlineTimestamp != null && remainingMs > 0
+
+    // Muscle volume map for integrated volume display
+    val muscleVolumeMap = remember(uiState.tasks) {
+        val uniqueExercises = uiState.tasks.groupBy { if (it.exerciseId.isNotBlank()) it.exerciseId else it.title }
+        val volumeMap = mutableMapOf<String, Int>()
+
+        uniqueExercises.forEach { (_, groupTasks) ->
+            val first = groupTasks.first()
+            val muscle = when {
+                first.targetMuscle.isNotBlank() -> first.targetMuscle
+                else -> inferTargetMuscle(first.exerciseId, first.title)
+            }
+            volumeMap[muscle] = (volumeMap[muscle] ?: 0) + groupTasks.size
+        }
+        volumeMap
+    }
 
     Column(
         modifier = Modifier
@@ -67,21 +88,21 @@ fun HeroProgressCard(uiState: WorkoutUiState, onOpenWeeklyReview: () -> Unit) {
 
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            "هفته $currentWeekNumber با موفقیت تکمیل شد! 🏆",
+                            strings.weekCompletedCelebration(currentWeekNumber),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                         if (isTimeRemaining) {
                             Text(
-                                "تا پایان یک هفته هنوز وقت داری پس هر کاری دلت میخواد انجام بده تو شایسته این آزادی هستی بعدش بیا برنامه هفته بعد رو بگیر",
+                                strings.timeRemainingFreeText,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.9f),
                                 lineHeight = 18.sp
                             )
                         } else {
                             Text(
-                                "شاخص‌های این هفته را ثبت کنید تا هوش مصنوعی برنامه جدید را بسازد.",
+                                strings.endOfWeekPromptNotice,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
                             )
@@ -97,7 +118,7 @@ fun HeroProgressCard(uiState: WorkoutUiState, onOpenWeeklyReview: () -> Unit) {
                             ) {
                                 Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("دریافت برنامه هفته جدید 🚀", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                                Text(strings.getNewWeekPlanBtn, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -105,7 +126,7 @@ fun HeroProgressCard(uiState: WorkoutUiState, onOpenWeeklyReview: () -> Unit) {
             }
         }
 
-        // Active Week Hero Card
+        // Active Week Hero Card (Purple / primaryContainer)
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(28.dp),
@@ -124,7 +145,7 @@ fun HeroProgressCard(uiState: WorkoutUiState, onOpenWeeklyReview: () -> Unit) {
                             shape = RoundedCornerShape(10.dp)
                         ) {
                             Text(
-                                "هفته $currentWeekNumber",
+                                strings.weekN(currentWeekNumber),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onPrimary,
@@ -139,7 +160,7 @@ fun HeroProgressCard(uiState: WorkoutUiState, onOpenWeeklyReview: () -> Unit) {
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = "$doneCount از $totalCount ست",
+                            text = strings.setsProgress(doneCount, totalCount),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -155,13 +176,13 @@ fun HeroProgressCard(uiState: WorkoutUiState, onOpenWeeklyReview: () -> Unit) {
                 ) {
                     Column {
                         Text(
-                            text = "پیشرفت تمرینات هفته",
+                            text = strings.weeklyWorkoutProgress,
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "$progressPercent٪",
+                            text = "$progressPercent%",
                             style = MaterialTheme.typography.displayMedium,
                             fontWeight = FontWeight.Black,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -198,20 +219,129 @@ fun HeroProgressCard(uiState: WorkoutUiState, onOpenWeeklyReview: () -> Unit) {
                     color = MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.15f)
                 )
+
+                // INTEGRATED MUSCLE VOLUME DISTRIBUTION SECTION (Moved into this card as requested)
+                if (muscleVolumeMap.isNotEmpty()) {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.15f),
+                        thickness = 1.dp,
+                        modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.BarChart,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = strings.muscleDistributionTitle,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+
+                        Surface(
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = strings.scientificVolumeBadge,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
+                    val entriesList = muscleVolumeMap.entries.toList()
+                    val firstRow = entriesList.take(4)
+                    val secondRow = entriesList.drop(4).take(4)
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        firstRow.forEach { (muscle, sets) ->
+                            IntegratedMuscleSetChip(
+                                muscle = strings.localizedMuscle(muscle),
+                                sets = sets,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                    if (secondRow.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            secondRow.forEach { (muscle, sets) ->
+                                IntegratedMuscleSetChip(
+                                    muscle = strings.localizedMuscle(muscle),
+                                    sets = sets,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
+fun IntegratedMuscleSetChip(muscle: String, sets: Int, modifier: Modifier = Modifier) {
+    val strings = LocalAppStrings.current
+    val isOptimal = sets in 4..22
+    Surface(
+        modifier = modifier,
+        color = if (isOptimal) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = muscle,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = strings.setsCount(sets),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = if (isOptimal) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+@Composable
 fun DeadlineChip(deadlineTimestamp: Long?, tasks: List<WorkoutTaskEntity>) {
+    val strings = LocalAppStrings.current
     if (deadlineTimestamp == null) {
         Surface(
             color = MaterialTheme.colorScheme.secondaryContainer,
             shape = RoundedCornerShape(12.dp)
         ) {
             Text(
-                "برنامه هفته فعال",
+                strings.activeWeekBadge,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
@@ -228,7 +358,7 @@ fun DeadlineChip(deadlineTimestamp: Long?, tasks: List<WorkoutTaskEntity>) {
             val hours = (remaining / (1000 * 60 * 60))
             val days = hours / 24
             val remHours = hours % 24
-            val timeText = if (days > 0) "⏱️ $days روز و $remHours ساعت مابقی" else "⏱️ $hours ساعت مابقی"
+            val timeText = if (days > 0) strings.deadlineRemaining(days, remHours) else strings.deadlineHoursOnly(hours)
             Triple(
                 MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
                 MaterialTheme.colorScheme.onSurface,
@@ -238,7 +368,7 @@ fun DeadlineChip(deadlineTimestamp: Long?, tasks: List<WorkoutTaskEntity>) {
         else -> Triple(
             MaterialTheme.colorScheme.errorContainer,
             MaterialTheme.colorScheme.onErrorContainer,
-            "⏱️ پایان مهلت هفته"
+            strings.deadlineEnded
         )
     }
 

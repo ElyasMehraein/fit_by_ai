@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.fitbyai.app.data.WeeklyHistoryEntity
+import com.fitbyai.app.i18n.LocalAppStrings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,6 +26,7 @@ fun HistoryDialog(
     onDismiss: () -> Unit,
     onResetData: () -> Unit
 ) {
+    val strings = LocalAppStrings.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     ModalBottomSheet(
@@ -34,8 +36,7 @@ fun HistoryDialog(
         dragHandle = { BottomSheetDefaults.DragHandle() },
         shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
     ) {
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-            Column(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp, vertical = 8.dp)
@@ -54,7 +55,7 @@ fun HistoryDialog(
                         tint = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = "تاریخچه پیشرفت تمرینی",
+                        text = strings.historyTitle,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -76,9 +77,9 @@ fun HistoryDialog(
                         modifier = Modifier.padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("کل هفته‌ها", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
+                        Text(strings.tabHistory, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("${historyList.size} هفته", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Text("${historyList.size}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
                     }
                 }
                 Surface(
@@ -90,7 +91,7 @@ fun HistoryDialog(
                         modifier = Modifier.padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("آخرین ثبت وزن", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f))
+                        Text(strings.baseWeightLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f))
                         Spacer(modifier = Modifier.height(4.dp))
                         val lastW = if (historyList.isNotEmpty()) "${historyList.last().weight} kg" else "-"
                         Text(lastW, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
@@ -111,16 +112,10 @@ fun HistoryDialog(
                     ) {
                         Icon(Icons.Default.History, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(48.dp))
                         Text(
-                            text = "هنوز تاریخچه‌ای ثبت نشده است",
+                            text = strings.emptyHistoryNotice,
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = "پس از پایان اولین هفته، روند پیشرفت شما در این بخش قابل مشاهده خواهد بود.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
                         )
                     }
                 }
@@ -153,7 +148,7 @@ fun HistoryDialog(
                                         shape = RoundedCornerShape(10.dp)
                                     ) {
                                         Text(
-                                            "هفته ${item.week}",
+                                            strings.weekN(item.week),
                                             style = MaterialTheme.typography.labelMedium,
                                             color = MaterialTheme.colorScheme.onPrimary,
                                             fontWeight = FontWeight.Bold,
@@ -170,7 +165,7 @@ fun HistoryDialog(
                                 ) {
                                     Column {
                                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                            Text("وزن: ${item.weight} kg", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                            Text("${strings.baseWeightLabel.substringBefore(' ')}: ${item.weight} kg", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                                             if (weightDelta != null && weightDelta != 0.0) {
                                                 val deltaText = if (weightDelta > 0) "+${String.format("%.1f", weightDelta)}" else String.format("%.1f", weightDelta)
                                                 Surface(
@@ -189,22 +184,22 @@ fun HistoryDialog(
                                         }
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                            Text("شکم: ${item.waist} cm", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            Text("${strings.baseWaistLabel.substringBefore(' ')}: ${item.waist} cm", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                             if (waistDelta != null && waistDelta != 0.0) {
                                                 val waistText = if (waistDelta > 0) "+${String.format("%.1f", waistDelta)}" else String.format("%.1f", waistDelta)
                                                 Text("($waistText)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                                             }
                                         }
-                                        if (item.jointPain.isNotBlank() && item.jointPain != "بدون درد مفصلی") {
+                                        if (item.jointPain.isNotBlank()) {
                                             Spacer(modifier = Modifier.height(2.dp))
-                                            Text("درد مفصلی: ${item.jointPain}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                                            Text("${strings.jointPainLabel}: ${item.jointPain}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
                                         }
-                                        if (item.muscleSoreness.isNotBlank() && item.muscleSoreness != "بدون کوفتگی") {
+                                        if (item.muscleSoreness.isNotBlank()) {
                                             Spacer(modifier = Modifier.height(2.dp))
-                                            Text("کوفتگی: ${item.muscleSoreness}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
+                                            Text("${strings.muscleSorenessLabel}: ${item.muscleSoreness}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
                                         }
                                     }
-                                    Text("${item.completionRate}% انجام", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                                    Text("${item.completionRate}%", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -222,9 +217,8 @@ fun HistoryDialog(
             ) {
                 Icon(Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("بازنشانی (ریست) تمام داده‌ها", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+                Text(strings.resetDataBtn, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
             }
         }
     }
-}
 }

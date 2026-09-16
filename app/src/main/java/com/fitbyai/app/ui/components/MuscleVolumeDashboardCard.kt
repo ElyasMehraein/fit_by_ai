@@ -16,34 +16,36 @@ import com.fitbyai.app.data.WorkoutTaskEntity
 
 @Composable
 fun MuscleVolumeDashboardCard(tasks: List<WorkoutTaskEntity>) {
+    val strings = com.fitbyai.app.i18n.LocalAppStrings.current
     if (tasks.isEmpty()) return
 
     val muscleVolumeMap = remember(tasks) {
-        val uniqueExercises = tasks.groupBy { if (it.exerciseId.isNotBlank()) it.exerciseId else it.title }
-        val volumeMap = mutableMapOf<String, Int>()
-
-        uniqueExercises.forEach { (_, groupTasks) ->
-            val first = groupTasks.first()
-            val muscle = when {
-                first.targetMuscle.isNotBlank() -> first.targetMuscle
-                else -> inferTargetMuscle(first.exerciseId, first.title)
-            }
-            volumeMap[muscle] = (volumeMap[muscle] ?: 0) + groupTasks.size
+        val map = linkedMapOf(
+            "سینه" to 0,
+            "پشت" to 0,
+            "پا" to 0,
+            "شانه" to 0,
+            "بازو" to 0,
+            "شکم" to 0,
+            "سایر" to 0
+        )
+        tasks.forEach { task ->
+            val detected = if (task.targetMuscle.isNotBlank()) task.targetMuscle else inferTargetMuscle(task.exerciseId, task.title)
+            map[detected] = (map[detected] ?: 0) + 1
         }
-        volumeMap
+        map.filter { it.value > 0 }
     }
 
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.4f),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ),
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -58,7 +60,7 @@ fun MuscleVolumeDashboardCard(tasks: List<WorkoutTaskEntity>) {
                         modifier = Modifier.size(18.dp)
                     )
                     Text(
-                        text = "توزیع حجم عضلانی هفتگی",
+                        text = strings.muscleDistributionTitle,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -69,7 +71,7 @@ fun MuscleVolumeDashboardCard(tasks: List<WorkoutTaskEntity>) {
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
-                        text = "حجم علمی بر اساس سطح",
+                        text = strings.scientificVolumeBadge,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
@@ -106,6 +108,7 @@ fun MuscleVolumeDashboardCard(tasks: List<WorkoutTaskEntity>) {
 
 @Composable
 fun MuscleSetChip(muscle: String, sets: Int, modifier: Modifier = Modifier) {
+    val strings = com.fitbyai.app.i18n.LocalAppStrings.current
     val isOptimal = sets in 4..22
     Surface(
         modifier = modifier,
@@ -118,14 +121,14 @@ fun MuscleSetChip(muscle: String, sets: Int, modifier: Modifier = Modifier) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = muscle,
+                text = strings.localizedMuscle(muscle),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = "$sets ست",
+                text = strings.setsCount(sets),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 color = if (isOptimal) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface

@@ -16,7 +16,8 @@ data class ExerciseJson(
     val targetPerSet: String? = null,
     val target: String? = null,
     val movementPattern: String? = null,
-    val targetMuscle: String? = null
+    val targetMuscle: String? = null,
+    val day: Int? = 1
 )
 
 data class ProgramJsonPayload(
@@ -87,14 +88,147 @@ class WorkoutRepository(private val dao: WorkoutDao) {
         pain: String,
         feedback: String,
         muscleSoreness: String = "نرمال",
-        jointPain: String = "بدون درد مفصلی"
+        jointPain: String = "بدون درد مفصلی",
+        language: com.fitbyai.app.i18n.AppLanguage = com.fitbyai.app.i18n.AppLanguage.DEFAULT
     ): String {
         val profile = dao.getUserProfile()
         val historyList = dao.getHistory()
         val weekNumber = historyList.size + 1
         val currentTasks = dao.getTasks()
+        val daysCount = profile?.daysPerWeek?.filter { it.isDigit() }?.toIntOrNull()?.coerceAtLeast(1) ?: 4
 
-        // 1. Details of the recent/current workout program and completed sets
+        if (language != com.fitbyai.app.i18n.AppLanguage.PERSIAN) {
+            // English / International AI Prompt
+            val currentWeekWorkoutText = if (currentTasks.isNotEmpty()) {
+                val grouped = currentTasks.groupBy { if (it.exerciseId.isNotBlank()) it.exerciseId else it.title }
+                val doneCount = currentTasks.count { it.completed }
+                val totalCount = currentTasks.size
+                val rate = if (totalCount > 0) ((doneCount.toDouble() / totalCount) * 100).toInt() else 0
+
+                val lines = grouped.map { (_, tasks) ->
+                    val first = tasks.first()
+                    val completedInGroup = tasks.count { it.completed }
+                    val muscleStr = if (first.targetMuscle.isNotBlank()) " | Muscle: ${first.targetMuscle}" else ""
+                    val dayStr = " [Day ${first.day}]"
+                    "  • ${first.title}$dayStr: ${tasks.size} sets (Target: ${first.targetPerSet.ifEmpty { "Execute" }}$muscleStr) | Status: $completedInGroup of ${tasks.size} sets completed"
+                }.joinToString("\n")
+
+                """
+                Recent Workout Program & Performance:
+                - Total sets completed: $doneCount of $totalCount sets ($rate%)
+                - Exercises and sets trained:
+                $lines
+                """.trimIndent()
+            } else {
+                "Recent Workout Program: No workouts in queue yet (or this is your first training week)."
+            }
+
+            val pastWeeksHistoryText = if (historyList.isNotEmpty()) {
+                historyList.joinToString("\n\n") { h ->
+                    val exText = if (h.exerciseSummary.isNotBlank()) "\n  • Summary: ${h.exerciseSummary}" else ""
+                    val soreText = if (h.muscleSoreness.isNotBlank()) " | Soreness: ${h.muscleSoreness}" else ""
+                    val jointText = if (h.jointPain.isNotBlank()) " | Joint pain: ${h.jointPain}" else ""
+                    """
+                    - Week ${h.week} (Date: ${h.date}):
+                      • Weight: ${h.weight} kg | Waist: ${h.waist} cm
+                      • Recovery: Sleep: ${h.sleep} | Energy: ${h.energy}/10 | RPE: ${h.rpe}/10 | Pain: ${h.pain}$soreText$jointText
+                      • Sets completed: ${h.completedSets} of ${h.totalSets} sets (${h.completionRate}%)
+                      • Feedback: ${h.feedback.ifEmpty { "None" }}$exText
+                    """.trimIndent()
+                }
+            } else {
+                "No previous weeks recorded yet (first week)."
+            }
+
+            val jointPainNotice = if (jointPain.isNotBlank() && jointPain != "بدون درد مفصلی" && jointPain != "No Joint Pain") {
+                "⚠️ Biomechanical Warning: The user reported tendon/joint pain in: \"$jointPain\". Replace heavy axial/joint stress movements with safer biomechanical alternatives."
+            } else {
+                "Joints Status: No acute joint or tendon pain reported."
+            }
+
+            return """
+You are an expert PhD in Kinesiology, Exercise Science, and Strength & Conditioning.
+I have completed my previous workout week. Here are my latest physical measurements, recovery metrics, and feedback:
+
+- Current Working Week: $weekNumber
+- New Weight: $weight kg
+- New Waist: $waist cm
+- Average Sleep: $sleep
+- Energy Level (1-10): $energy
+- Workout Difficulty / RPE (1-10): $rpe
+- Muscle Soreness (DOMS): ${muscleSoreness.ifEmpty { "Normal" }}
+- Joint/Tendon Pain: ${jointPain.ifEmpty { "None" }}
+- User Feedback: ${feedback.ifEmpty { "None" }}
+
+$jointPainNotice
+
+========================================
+$currentWeekWorkoutText
+========================================
+
+My Initial & Current Profile:
+- Height: ${profile?.height ?: "-"} cm | Age: ${profile?.age ?: "-"} | Gender: ${profile?.gender ?: "-"}
+- Base Weight: ${profile?.baseWeight ?: "-"} kg | Base Waist: ${profile?.baseWaist ?: "-"} cm | Target Weight: ${profile?.targetWeight?.ifEmpty { "-" } ?: "-"} kg
+- Primary Goal: ${profile?.goal ?: "-"}
+- Experience: ${profile?.experience ?: "-"} years
+- Workout Days per Week: $daysCount days
+- Session Duration: ${profile?.sessionDuration ?: "-"} minutes
+- Daily Activity Level: ${profile?.activityLevel?.ifEmpty { "-" } ?: "-"}
+- Available Equipment: ${profile?.equipment ?: "-"}
+- Injuries & Limitations: ${profile?.limitations ?: "-"}
+- Health Conditions: ${profile?.healthConditions?.ifEmpty { "None" } ?: "None"}
+
+========================================
+Performance History:
+$pastWeeksHistoryText
+========================================
+
+Scientific Guidelines for Designing the New Program:
+1. Ask me to send an updated physique photo with good lighting and no filters.
+2. Compare visual physique changes, waist, scale weight, sleep, and fatigue markers according to Progressive Overload.
+3. If high fatigue or joint soreness is reported, program a Deload week.
+4. **Reps in Reserve (RIR)**: In `targetPerSet`, always specify the target repetitions and appropriate RIR (e.g. "10-12 reps (RIR 2)").
+5. **Target Muscle (`targetMuscle`)**: Explicitly designate the primary target muscle (e.g., Chest, Back, Legs, Shoulders, Arms, Abs).
+6. **Scientific Volume (MEV to MAV)**: Scale weekly volume based on recovery, experience, and lifestyle.
+7. **Workout Day Allocation (`day`)**: The user has specified **$daysCount workout days per week**. You MUST organize the exercises into these specific $daysCount workout days (e.g. Day 1, Day 2, up to Day $daysCount). In each exercise object, you MUST provide the `"day"` integer property (from 1 to $daysCount) designating which workout day the exercise belongs to. The `weeklySets` key represents the number of sets for that exercise on that day.
+8. Exercise ID (`id`) must be a clean snake_case English name (e.g., bench_press, barbell_squat, dumbbell_row, lat_pulldown, plank).
+9. Output the final workout program ONLY as a valid JSON object matching the exact structure below (no markdown wrapping or extra text):
+
+{
+  "exercises": [
+    {
+      "id": "bench_press",
+      "title": "Barbell Bench Press",
+      "day": 1,
+      "description": "Control the eccentric phase and touch mid-chest with elbows at 45-75 degrees",
+      "weeklySets": 4,
+      "targetPerSet": "10-12 reps (RIR 2)",
+      "targetMuscle": "Chest"
+    },
+    {
+      "id": "incline_dumbbell_press",
+      "title": "Incline Dumbbell Press",
+      "day": 1,
+      "description": "Target upper clavicular pec fibers with 30 degree bench angle",
+      "weeklySets": 3,
+      "targetPerSet": "10-12 reps (RIR 2)",
+      "targetMuscle": "Chest"
+    },
+    {
+      "id": "barbell_squat",
+      "title": "Barbell Back Squat",
+      "day": 2,
+      "description": "Full depth squat maintaining neutral spine and thoracic extension",
+      "weeklySets": 4,
+      "targetPerSet": "8-10 reps (RIR 2)",
+      "targetMuscle": "Legs"
+    }
+  ]
+}
+""".trimIndent()
+        }
+
+        // Persian AI Prompt
         val currentWeekWorkoutText = if (currentTasks.isNotEmpty()) {
             val grouped = currentTasks.groupBy { if (it.exerciseId.isNotBlank()) it.exerciseId else it.title }
             val doneCount = currentTasks.count { it.completed }
@@ -105,7 +239,8 @@ class WorkoutRepository(private val dao: WorkoutDao) {
                 val first = tasks.first()
                 val completedInGroup = tasks.count { it.completed }
                 val muscleStr = if (first.targetMuscle.isNotBlank()) " | عضله: ${first.targetMuscle}" else ""
-                "  • ${first.title}: ${tasks.size} ست (هدف هر ست: ${first.targetPerSet.ifEmpty { "اجرا" }}$muscleStr) | وضعیت: $completedInGroup از ${tasks.size} ست انجام شد"
+                val dayStr = " [روز ${first.day}]"
+                "  • ${first.title}$dayStr: ${tasks.size} ست (هدف هر ست: ${first.targetPerSet.ifEmpty { "اجرا" }}$muscleStr) | وضعیت: $completedInGroup از ${tasks.size} ست انجام شد"
             }.joinToString("\n")
 
             """
@@ -118,7 +253,6 @@ class WorkoutRepository(private val dao: WorkoutDao) {
             "برنامه تمرینی اخیر: هنوز حرکتی در صف ثبت نشده است (یا این اولین هفته تمرینی شماست)."
         }
 
-        // 2. Details of past weeks history
         val pastWeeksHistoryText = if (historyList.isNotEmpty()) {
             historyList.joinToString("\n\n") { h ->
                 val exText = if (h.exerciseSummary.isNotBlank()) "\n  • حرکات تمرین‌شده: ${h.exerciseSummary}" else ""
@@ -167,7 +301,7 @@ $currentWeekWorkoutText
 - وزن پایه: ${profile?.baseWeight ?: "-"} kg | دور شکم پایه: ${profile?.baseWaist ?: "-"} cm | وزن هدف: ${profile?.targetWeight?.ifEmpty { "-" } ?: "-"} kg
 - هدف اصلی: ${profile?.goal ?: "-"}
 - سابقه تمرینی: ${profile?.experience?.let { if (it.isNotBlank() && it.all { c -> c.isDigit() }) "$it سال" else it } ?: "-"}
-- روزهای تمرین در هفته: ${profile?.daysPerWeek?.let { if (it.isNotBlank() && it.all { c -> c.isDigit() }) "$it روز در هفته" else it } ?: "-"}
+- روزهای تمرین در هفته: ${daysCount} روز در هفته
 - زمان در دسترس هر جلسه: ${profile?.sessionDuration?.let { if (it.isNotBlank() && it.all { c -> c.isDigit() }) "$it دقیقه" else it } ?: "-"}
 - سطح فعالیت روزمره: ${profile?.activityLevel?.ifEmpty { "-" } ?: "-"}
 - تجهیزات در دسترس: ${profile?.equipment ?: "-"}
@@ -184,9 +318,9 @@ $pastWeeksHistoryText
 ۲. پس از دریافت عکس، روند تغییرات ظاهری، وزن، دور شکم، خواب، انرژی و بازخوردهای من را دقیقاً مقایسه کن.
 ۳. بر اساس اصل اضافه بار تدریجی (Progressive Overload)، شدت (RPE)، تعداد ست‌ها یا حجم تمرین را تنظیم کرده یا در صورت خستگی شدید/درد مفصلی هفته دِلود (Deload) تجویز کن.
 ۴. **تکرار در ذخیره (RIR)**: در کلید targetPerSet علاوه بر تعداد تکرار، حتماً مقدار RIR مناسب (مثلاً RIR 1 تا 3) را ذکر کن (مثلاً: «۱۰ الی ۱۲ تکرار (RIR 2)»).
-۵. **عضله هدف (targetMuscle)** را برای هر حرکت به صورت شفاف تعیین کن (از مقادیر استاندارد فارسی مانند: سینه، پشت، پا، شانه، بازو، شکم).
-۶. **محاسبه هوشمند و علمی حجم ست‌های هفتگی (Flexible Volume Calculation - MEV to MAV)**: حجم ست‌های هفتگی نباید صلب باشد؛ بلکه بر اساس **سطح آمادگی کاربر**، **مقدار تحرک روزمره**، **سابقه ورزشی (سال)** و **سطح ریکاوری (خواب/انرژی/درد)** تعیین شود. برای افراد بی‌تحرک، مبتدی یا در فاز ریکاوری/نگهداری، حتی **۴ الی ۶ ست هفتگی** برای یک عضله (یا فعالیت‌های ساده مانند ۳ روز پیاده‌روی ۲۰ دقیقه‌ای) حداقل حجم موثر علمی (Minimum Effective Volume) بوده و کاملاً رشددهنده و مناسب است. برای افراد متوسط تا پیشرفته با ریکاوری عالی، حجم عضلات اصلی تا ۱۰ الی ۲۰ ست هفتگی قابل افزایش است.
-۷. کلید `weeklySets` نشان‌دهنده **مجموع کل ست‌های آن حرکت در طول کل ۱ هفته** است و به روزهای خاص تقسیم نمی‌شود تا کاربر آزادانه ست‌ها را در طول هفته توزیع کند.
+۵. **عضله هدف (targetMuscle)** را برای هر حرکت به صورت شفاف تعیین کن (از مقادیر استاندارد مانند: سینه، پشت، پا، شانه، بازو، شکم).
+۶. **محاسبه هوشمند و علمی حجم ست‌های هفتگی (Flexible Volume Calculation - MEV to MAV)**: حجم ست‌های هفتگی نباید صلب باشد؛ بلکه بر اساس سطح آمادگی کاربر، مقدار تحرک روزمره، سابقه ورزشی و سطح ریکاوری تعیین شود.
+۷. **تفکیک حرکات بر اساس روزهای تمرینی (کلید day)**: کاربر در اطلاعات خود اعلام کرده است که **$daysCount روز در هفته** تمرین می‌کند. بنابراین حرکات برنامه تمرینی جدید را دقیقاً بین این $daysCount روز تفکیک و توزیع کن (مثلاً روز اول: سینه و پشت‌بازو، روز دوم: پشت و جلوبازو، روز سوم: پا و شکم و...). برای هر حرکت در آبجکت JSON، حتماً کلید `"day"` را با عدد صحیح روز تمرینی (از ۱ تا $daysCount) ثبت کن. کلید `weeklySets` نشان‌دهنده تعداد ست‌های آن حرکت در همان روز است.
 ۸. شناسه هر حرکت (id) باید اسم دقیق انگلیسی مانند bench_press، barbell_squat، push_up، dumbbell_bicep_curl، lat_pulldown، plank، deadlift و... باشد.
 ۹. خروجی نهایی برنامه تمرینی هفته جدید را فقط و فقط در قالب یک آبجکت معتبر JSON مطابق ساختار زیر ارسال کن (بدون هیچ متن اضافی قبل یا بعد از کد):
 
@@ -195,24 +329,27 @@ $pastWeeksHistoryText
     {
       "id": "bench_press",
       "title": "پرس سینه با هالتر",
+      "day": 1,
       "description": "توضیحات کامل تکنیک اجرای صحیح و کنترل فاز منفی",
-      "weeklySets": 6,
+      "weeklySets": 4,
       "targetPerSet": "۱۰ الی ۱۲ تکرار (RIR 2)",
       "targetMuscle": "سینه"
     },
     {
       "id": "incline_dumbbell_press",
       "title": "پرس سینه بالاسینه با دمبل",
+      "day": 1,
       "description": "تمرکز روی بخش بالایی سینه و کنترل دامنه حرکت",
-      "weeklySets": 6,
+      "weeklySets": 4,
       "targetPerSet": "۱۰ الی ۱۲ تکرار (RIR 2)",
       "targetMuscle": "سینه"
     },
     {
       "id": "barbell_squat",
       "title": "اسکوات با هالتر",
+      "day": 2,
       "description": "اجرای کامل با حفظ قوس طبیعی کمر",
-      "weeklySets": 8,
+      "weeklySets": 4,
       "targetPerSet": "۸ الی ۱۰ تکرار (RIR 2)",
       "targetMuscle": "پا"
     }
@@ -301,7 +438,8 @@ $pastWeeksHistoryText
                             totalSets = ex.weeklySets,
                             completed = false,
                             movementPattern = ex.movementPattern ?: "",
-                            targetMuscle = ex.targetMuscle ?: ""
+                            targetMuscle = ex.targetMuscle ?: "",
+                            day = ex.day ?: 1
                         )
                     )
                 }

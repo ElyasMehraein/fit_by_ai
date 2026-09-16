@@ -26,6 +26,7 @@ import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
 import com.fitbyai.app.data.WorkoutTaskEntity
+import com.fitbyai.app.i18n.LocalAppStrings
 import com.fitbyai.app.ui.dialogs.GoogleImageSearchDialog
 
 data class TaskGroup(
@@ -56,6 +57,7 @@ fun StackedExerciseTaskCard(
     onDeleteTask: (taskId: String) -> Unit,
     onUpdateImage: (exerciseId: String, title: String, imageUrl: String) -> Unit
 ) {
+    val strings = LocalAppStrings.current
     val activeTask = taskGroup.tasks.firstOrNull() ?: return
     val remainingSetsCount = taskGroup.tasks.size
     val context = LocalContext.current
@@ -117,7 +119,7 @@ fun StackedExerciseTaskCard(
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text(
-                                text = "ست ${activeTask.setNumber + i} از ${activeTask.totalSets} (در صف)",
+                                text = strings.queuedBadge(activeTask.setNumber + i, activeTask.totalSets),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -184,7 +186,7 @@ fun StackedExerciseTaskCard(
                                             tint = MaterialTheme.colorScheme.onTertiaryContainer
                                         )
                                         Text(
-                                            text = "$remainingSetsCount ست در صف",
+                                            text = strings.remainingSetsBadge(remainingSetsCount),
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onTertiaryContainer
@@ -197,7 +199,7 @@ fun StackedExerciseTaskCard(
                                     shape = RoundedCornerShape(10.dp)
                                 ) {
                                     Text(
-                                        text = "ست ${activeTask.setNumber} از ${activeTask.totalSets}",
+                                        text = strings.setProgressLabel(activeTask.setNumber, activeTask.totalSets),
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -218,7 +220,7 @@ fun StackedExerciseTaskCard(
                                         shape = RoundedCornerShape(8.dp)
                                     ) {
                                         Text(
-                                            text = "عضله: ${activeTask.targetMuscle}",
+                                            text = "${strings.musclePrefix} ${strings.localizedMuscle(activeTask.targetMuscle)}",
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -232,7 +234,7 @@ fun StackedExerciseTaskCard(
                                         shape = RoundedCornerShape(8.dp)
                                     ) {
                                         Text(
-                                            text = "هدف: ${activeTask.targetPerSet}",
+                                            text = "${strings.targetLabel} ${activeTask.targetPerSet}",
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.primary,
@@ -289,12 +291,12 @@ fun StackedExerciseTaskCard(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Edit,
-                                        contentDescription = "تغییر عکس",
+                                        contentDescription = strings.changeImage,
                                         modifier = Modifier.size(14.dp),
                                         tint = MaterialTheme.colorScheme.primary
                                     )
                                     Text(
-                                        text = "تغییر عکس",
+                                        text = strings.changeImage,
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.primary
@@ -324,12 +326,12 @@ fun StackedExerciseTaskCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Search,
-                            contentDescription = "جستجوی عکس در گوگل",
+                            contentDescription = strings.searchGoogleImages,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (userSelectedImage != null) "تغییر / جستجوی عکس از گوگل" else "جستجو و انتخاب عکس از گوگل",
+                            text = if (userSelectedImage != null) strings.changeGoogleImage else strings.searchGoogleImages,
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -351,7 +353,7 @@ fun StackedExerciseTaskCard(
                         ) {
                             Icon(
                                 Icons.Default.Delete,
-                                contentDescription = "حذف ست",
+                                contentDescription = strings.deleteSet,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -372,7 +374,7 @@ fun StackedExerciseTaskCard(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = if (activeTask.completed) "انجام شد (تغییر وضعیت)" else if (activeTask.setNumber == activeTask.totalSets) "انجام آخرین ست" else "تکمیل ست ${activeTask.setNumber}",
+                                text = strings.completeSetBtn(activeTask.setNumber, activeTask.setNumber == activeTask.totalSets, activeTask.completed),
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = FontWeight.Bold
                             )
@@ -391,6 +393,7 @@ fun SingleSetTaskCard(
     onDeleteTask: (taskId: String) -> Unit,
     onUpdateImage: (exerciseId: String, title: String, imageUrl: String) -> Unit
 ) {
+    val strings = LocalAppStrings.current
     val context = LocalContext.current
     val animatedImageLoader = rememberAnimatedImageLoader()
     var showSearchDialog by remember { mutableStateOf(false) }
@@ -445,7 +448,7 @@ fun SingleSetTaskCard(
                             shape = RoundedCornerShape(10.dp)
                         ) {
                             Text(
-                                text = "ست ${task.setNumber} از ${task.totalSets}",
+                                text = strings.setProgressLabel(task.setNumber, task.totalSets),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = if (task.completed) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onPrimaryContainer,
@@ -465,7 +468,7 @@ fun SingleSetTaskCard(
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Text(
-                                        text = "عضله: ${task.targetMuscle}",
+                                        text = "${strings.musclePrefix} ${strings.localizedMuscle(task.targetMuscle)}",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -479,7 +482,7 @@ fun SingleSetTaskCard(
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Text(
-                                        text = "هدف: ${task.targetPerSet}",
+                                        text = "${strings.targetLabel} ${task.targetPerSet}",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.primary,
@@ -536,12 +539,12 @@ fun SingleSetTaskCard(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Edit,
-                                    contentDescription = "تغییر عکس",
+                                    contentDescription = strings.changeImage,
                                     modifier = Modifier.size(14.dp),
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                                 Text(
-                                    text = "تغییر عکس",
+                                    text = strings.changeImage,
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
@@ -571,12 +574,12 @@ fun SingleSetTaskCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Search,
-                        contentDescription = "جستجوی عکس در گوگل",
+                        contentDescription = strings.searchGoogleImages,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (userSelectedImage != null) "تغییر / جستجوی عکس از گوگل" else "جستجو و انتخاب عکس از گوگل",
+                        text = if (userSelectedImage != null) strings.changeGoogleImage else strings.searchGoogleImages,
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -598,7 +601,7 @@ fun SingleSetTaskCard(
                     ) {
                         Icon(
                             Icons.Default.Delete,
-                            contentDescription = "حذف ست",
+                            contentDescription = strings.deleteSet,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -619,7 +622,7 @@ fun SingleSetTaskCard(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (task.completed) "بازگردانی به صف" else if (task.setNumber == task.totalSets) "انجام آخرین ست" else "تکمیل ست ${task.setNumber}",
+                            text = if (task.completed) strings.restoreToQueue else strings.completeSetBtn(task.setNumber, task.setNumber == task.totalSets, false),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold
                         )

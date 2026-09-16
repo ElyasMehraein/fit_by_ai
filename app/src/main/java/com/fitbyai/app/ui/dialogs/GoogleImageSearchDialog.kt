@@ -43,6 +43,8 @@ import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
 
+import com.fitbyai.app.i18n.LocalAppStrings
+
 class ImageBridge(private val onImagePicked: (String) -> Unit) {
     @JavascriptInterface
     fun selectImage(url: String) {
@@ -60,6 +62,7 @@ fun GoogleImageSearchDialog(
     onDismiss: () -> Unit,
     onImageSelected: (imageUrl: String) -> Unit
 ) {
+    val strings = LocalAppStrings.current
     val context = LocalContext.current
     val animatedImageLoader = remember(context) {
         ImageLoader.Builder(context)
@@ -76,8 +79,8 @@ fun GoogleImageSearchDialog(
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var isLoadingPage by remember { mutableStateOf(true) }
 
-    val searchQuery = remember(exerciseTitle) {
-        Uri.encode("حرکت ورزشی $exerciseTitle")
+    val searchQuery = remember(exerciseTitle, strings) {
+        Uri.encode("${strings.exerciseSearchQueryPrefix}$exerciseTitle")
     }
     val searchUrl = "https://www.google.com/search?q=$searchQuery&tbm=isch"
 
@@ -132,7 +135,7 @@ fun GoogleImageSearchDialog(
                             }
                             Column {
                                 Text(
-                                    text = "جستجو و انتخاب عکس تمرین",
+                                    text = strings.searchImageTitle,
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
@@ -151,7 +154,7 @@ fun GoogleImageSearchDialog(
                         IconButton(onClick = onDismiss) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "بستن",
+                                contentDescription = strings.closeBtn,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -177,7 +180,7 @@ fun GoogleImageSearchDialog(
                             modifier = Modifier.size(18.dp)
                         )
                         Text(
-                            text = "روی عکس دلخواه در گوگل بزنید یا لمس طولانی کنید تا انتخاب شود.",
+                            text = strings.searchImageInstruction,
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onTertiaryContainer,
                             fontWeight = FontWeight.Medium
@@ -324,7 +327,7 @@ fun GoogleImageSearchDialog(
                                                 .crossfade(true)
                                                 .build(),
                                             imageLoader = animatedImageLoader,
-                                            contentDescription = "تصویر انتخابی",
+                                            contentDescription = strings.imageSelectedReady,
                                             modifier = Modifier.fillMaxSize(),
                                             contentScale = ContentScale.Fit
                                         )
@@ -335,13 +338,13 @@ fun GoogleImageSearchDialog(
                                         verticalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
                                         Text(
-                                            text = "تصویر انتخابی آماده ذخیره",
+                                            text = strings.imageSelectedReady,
                                             style = MaterialTheme.typography.titleSmall,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
                                         Text(
-                                            text = "این عکس به‌جای عکس فعلی تمرین «$exerciseTitle» قرار می‌گیرد.",
+                                            text = strings.imageReplaceNotice(exerciseTitle),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             lineHeight = 18.sp
@@ -364,7 +367,7 @@ fun GoogleImageSearchDialog(
                                             modifier = Modifier.size(16.dp)
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
-                                        Text("عکس دیگر")
+                                        Text(strings.pickAnotherImage)
                                     }
 
                                     Button(
@@ -385,7 +388,7 @@ fun GoogleImageSearchDialog(
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
-                                            text = "ذخیره به‌عنوان عکس تمرین",
+                                            text = strings.saveAsExerciseImage,
                                             fontWeight = FontWeight.Bold
                                         )
                                     }

@@ -45,22 +45,22 @@ data class ProfileHistoryEntity(
     val healthConditions: String = ""
 )
 
-fun getRelativeTimeSpanString(timestamp: Long): String {
+fun getRelativeTimeSpanString(timestamp: Long, strings: com.fitbyai.app.i18n.AppStrings? = null): String {
     val now = System.currentTimeMillis()
     val diffMs = now - timestamp
-    if (diffMs < 0) return "همین الان"
+    if (diffMs < 0) return strings?.timeJustNow ?: "Just now"
     val diffMinutes = diffMs / (1000 * 60)
     val diffHours = diffMs / (1000 * 60 * 60)
     val diffDays = diffMs / (1000 * 60 * 60 * 24)
 
     return when {
-        diffMinutes < 2 -> "همین الان"
-        diffMinutes < 60 -> "$diffMinutes دقیقه پیش"
-        diffHours < 24 -> "$diffHours ساعت پیش"
-        diffDays == 1L -> "دیروز"
-        diffDays < 30 -> "$diffDays روز پیش"
-        diffDays < 365 -> "${diffDays / 30} ماه پیش"
-        else -> "${diffDays / 365} سال پیش"
+        diffMinutes < 2 -> strings?.timeJustNow ?: "Just now"
+        diffMinutes < 60 -> strings?.timeMinutesAgo(diffMinutes) ?: "$diffMinutes min ago"
+        diffHours < 24 -> strings?.timeHoursAgo(diffHours) ?: "$diffHours hr ago"
+        diffDays == 1L -> strings?.timeYesterday ?: "Yesterday"
+        diffDays < 30 -> strings?.timeDaysAgo(diffDays) ?: "$diffDays days ago"
+        diffDays < 365 -> strings?.timeMonthsAgo(diffDays / 30) ?: "${diffDays / 30} months ago"
+        else -> strings?.timeYearsAgo(diffDays / 365) ?: "${diffDays / 365} years ago"
     }
 }
 
@@ -76,7 +76,8 @@ data class WorkoutTaskEntity(
     val totalSets: Int,
     val completed: Boolean,
     val movementPattern: String = "",
-    val targetMuscle: String = ""
+    val targetMuscle: String = "",
+    val day: Int = 1
 )
 
 @Entity(tableName = "weekly_history")

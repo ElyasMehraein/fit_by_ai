@@ -19,22 +19,21 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.fitbyai.app.i18n.AppLanguage
+import com.fitbyai.app.i18n.LocalAppStrings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,12 +43,14 @@ fun WeeklyReviewDialog(
     isLoading: Boolean,
     initialWeight: String = "",
     initialWaist: String = "",
-    profileLastUpdatedText: String = "همین الان",
+    profileLastUpdatedText: String = "Just now",
+    currentLanguage: AppLanguage = AppLanguage.DEFAULT,
     onDismiss: () -> Unit,
     onEditProfile: () -> Unit,
     onGeneratePrompt: (weight: String, waist: String, sleep: String, energy: Int, rpe: Int, pain: String, feedback: String, muscleSoreness: String, jointPain: String) -> Unit,
     onImportProgram: (jsonRaw: String, weight: String, waist: String, sleep: String, energy: Int, rpe: Int, pain: String, feedback: String, muscleSoreness: String, jointPain: String) -> Unit
 ) {
+    val strings = LocalAppStrings.current
     val context = LocalContext.current
     val composeClipboardManager = LocalClipboardManager.current
 
@@ -58,16 +59,31 @@ fun WeeklyReviewDialog(
     var sleepHours by remember { mutableStateOf(7.5f) }
     var energy by remember { mutableStateOf(8f) }
     var rpe by remember { mutableStateOf(7f) }
-    var muscleSoreness by remember { mutableStateOf("عادی / خفیف") }
-    var jointPainSet by remember { mutableStateOf(setOf("بدون درد مفصلی")) }
+
+    val isFa = currentLanguage == AppLanguage.PERSIAN
+
+    val noJointPainText = if (isFa) "بدون درد مفصلی" else strings.jointPainNone
+    val defaultSorenessText = if (isFa) "عادی / خفیف" else strings.sorenessNormal
+
+    var muscleSoreness by remember { mutableStateOf(defaultSorenessText) }
+    var jointPainSet by remember { mutableStateOf(setOf(noJointPainText)) }
     var feedback by remember { mutableStateOf("") }
     var jsonInput by remember { mutableStateOf("") }
 
-    val jointOptions = listOf("بدون درد مفصلی", "شانه", "زانو", "مچ دست / آرنج", "کمر / ستون فقرات", "مچ پا")
-    val sorenessOptions = listOf("عادی / خفیف", "متوسط", "شدید (>۴۸ساعت)")
+    val jointOptions = if (isFa) {
+        listOf("بدون درد مفصلی", "شانه", "زانو", "مچ دست / آرنج", "کمر / ستون فقرات", "مچ پا")
+    } else {
+        listOf(strings.jointPainNone, "Shoulders", "Knees", "Wrists / Elbows", "Lower Back", "Ankles")
+    }
 
-    val finalJointPain = remember(jointPainSet) {
-        if (jointPainSet.contains("بدون درد مفصلی") || jointPainSet.isEmpty()) "بدون درد مفصلی" else jointPainSet.joinToString("، ")
+    val sorenessOptions = if (isFa) {
+        listOf("عادی / خفیف", "متوسط", "شدید (>۴۸ساعت)")
+    } else {
+        listOf(strings.sorenessNormal, strings.sorenessHigh, strings.sorenessExtreme)
+    }
+
+    val finalJointPain = remember(jointPainSet, noJointPainText) {
+        if (jointPainSet.contains(noJointPainText) || jointPainSet.isEmpty()) noJointPainText else jointPainSet.joinToString("، ")
     }
 
     var detectedClipboardJson by remember { mutableStateOf<String?>(null) }
@@ -92,15 +108,14 @@ fun WeeklyReviewDialog(
         dragHandle = { BottomSheetDefaults.DragHandle() },
         shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
     ) {
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 8.dp)
-                    .padding(bottom = 32.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 8.dp)
+                .padding(bottom = 32.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
             // Header
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(
@@ -115,7 +130,7 @@ fun WeeklyReviewDialog(
                             tint = MaterialTheme.colorScheme.primary
                         )
                         Text(
-                            text = "دریافت برنامه تمرینی",
+                            text = strings.weeklyReviewTitle,
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -125,26 +140,21 @@ fun WeeklyReviewDialog(
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.padding(top = 2.dp)
                 ) {
                     Text(
-                        text = "بر اساس آخرین",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = strings.profileLastUpdated(profileLastUpdatedText),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                     )
                     Text(
-                        text = "ویرایش پروفایل",
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = "• ${strings.editProfileBtn}",
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                         textDecoration = TextDecoration.Underline,
                         modifier = Modifier.clickable { onEditProfile() }
-                    )
-                    Text(
-                        text = " (آخرین بروز رسانی $profileLastUpdatedText)",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                     )
                 }
             }
@@ -156,13 +166,13 @@ fun WeeklyReviewDialog(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Text("ارزیابی ریکاوری و فیزیولوژی هفته اخیر", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                    Text(strings.reviewIntroNotice, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
 
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         // Sleep Slider
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("میانگین خواب روزانه", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("${String.format("%.1f", sleepHours)} ساعت", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                            Text(strings.sleepLabel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("${String.format("%.1f", sleepHours)} ${strings.minutesSuffix.replace("min", "h")}", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                         }
                         Slider(
                             value = sleepHours,
@@ -177,8 +187,8 @@ fun WeeklyReviewDialog(
 
                         // Energy Slider
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("سطح انرژی بدنی", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("${energy.toInt()} / ۱۰", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                            Text(strings.energyLabel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("${energy.toInt()} / 10", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                         }
                         Slider(
                             value = energy,
@@ -192,9 +202,9 @@ fun WeeklyReviewDialog(
                         )
 
                         // RPE Slider
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text("فشار تمرینات (RPE)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("${rpe.toInt()} / ۱۰", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(strings.rpeLabel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("${rpe.toInt()} / 10", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                         }
                         Slider(
                             value = rpe,
@@ -202,61 +212,61 @@ fun WeeklyReviewDialog(
                             valueRange = 1f..10f,
                             steps = 8,
                             colors = SliderDefaults.colors(
-                                thumbColor = MaterialTheme.colorScheme.secondary,
-                                activeTrackColor = MaterialTheme.colorScheme.secondary
+                                thumbColor = MaterialTheme.colorScheme.primary,
+                                activeTrackColor = MaterialTheme.colorScheme.primary
                             )
                         )
 
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                        // Muscle Soreness Selection (DOMS)
+                        // Soreness Section
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("وضعیت کوفتگی عضلانی (DOMS):", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(strings.muscleSorenessLabel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
                                 sorenessOptions.forEach { option ->
-                                    val selected = muscleSoreness == option
+                                    val isSelected = muscleSoreness == option
                                     FilterChip(
-                                        selected = selected,
+                                        selected = isSelected,
                                         onClick = { muscleSoreness = option },
                                         label = { Text(option, style = MaterialTheme.typography.labelSmall) },
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(10.dp)
                                     )
                                 }
                             }
                         }
 
-                        // Joint / Tendon Pain Assessment (Multi-select)
+                        // Joint Pain Section
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
-                                Text("دردهای مفصلی / تاندونی (انتخاب چندگانه):", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
-                            }
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                val rows = listOf(jointOptions.take(3), jointOptions.drop(3))
-                                rows.forEach { rowOptions ->
-                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        rowOptions.forEach { option ->
-                                            val selected = jointPainSet.contains(option)
-                                            FilterChip(
-                                                selected = selected,
-                                                onClick = {
-                                                    if (option == "بدون درد مفصلی") {
-                                                        jointPainSet = setOf("بدون درد مفصلی")
+                            Text(strings.jointPainLabel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            jointOptions.chunked(3).forEach { rowOptions ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    rowOptions.forEach { option ->
+                                        val isSelected = jointPainSet.contains(option)
+                                        FilterChip(
+                                            selected = isSelected,
+                                            onClick = {
+                                                if (option == noJointPainText) {
+                                                    jointPainSet = setOf(noJointPainText)
+                                                } else {
+                                                    val nextSet = jointPainSet.toMutableSet()
+                                                    nextSet.remove(noJointPainText)
+                                                    if (nextSet.contains(option)) {
+                                                        nextSet.remove(option)
                                                     } else {
-                                                        val nextSet = jointPainSet.toMutableSet()
-                                                        nextSet.remove("بدون درد مفصلی")
-                                                        if (selected) {
-                                                            nextSet.remove(option)
-                                                        } else {
-                                                            nextSet.add(option)
-                                                        }
-                                                        jointPainSet = if (nextSet.isEmpty()) setOf("بدون درد مفصلی") else nextSet
+                                                        nextSet.add(option)
                                                     }
-                                                },
-                                                label = { Text(option, style = MaterialTheme.typography.labelSmall) },
-                                                modifier = Modifier.weight(1f)
-                                            )
-                                        }
+                                                    jointPainSet = if (nextSet.isEmpty()) setOf(noJointPainText) else nextSet
+                                                }
+                                            },
+                                            label = { Text(option, style = MaterialTheme.typography.labelSmall) },
+                                            modifier = Modifier.weight(1f),
+                                            shape = RoundedCornerShape(10.dp)
+                                        )
                                     }
                                 }
                             }
@@ -285,7 +295,7 @@ fun WeeklyReviewDialog(
             ) {
                 Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("تولید پرامپت اختصاصی هوش مصنوعی", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(strings.generatePromptBtn, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
 
             if (!generatedPrompt.isNullOrBlank()) {
@@ -309,14 +319,14 @@ fun WeeklyReviewDialog(
                             )
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "پرامپت اختصاصی هوش مصنوعی آماده شد!",
+                                    text = strings.generatedPromptTitle,
                                     style = MaterialTheme.typography.titleSmall,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "می‌توانید متن پرامپت را کپی کنید یا مستقیماً به برنامه ChatGPT بفرستید.",
+                                    text = strings.promptInstructions,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f),
                                     lineHeight = 18.sp
@@ -333,7 +343,7 @@ fun WeeklyReviewDialog(
                                 onClick = {
                                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                     clipboard.setPrimaryClip(ClipData.newPlainText("AI Prompt", generatedPrompt))
-                                    Toast.makeText(context, "پرامپت کپی شد!", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, strings.promptCopiedToast, Toast.LENGTH_SHORT).show()
                                 },
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(12.dp),
@@ -345,12 +355,12 @@ fun WeeklyReviewDialog(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.ContentCopy,
-                                    contentDescription = "کپی",
+                                    contentDescription = strings.copyPromptBtn,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "کپی پرامپت",
+                                    text = strings.copyPromptBtn,
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -359,7 +369,7 @@ fun WeeklyReviewDialog(
                             // Send to ChatGPT Button
                             Button(
                                 onClick = {
-                                    openChatGPT(context, generatedPrompt)
+                                    openChatGPT(context, generatedPrompt, strings.promptCopiedToast)
                                 },
                                 modifier = Modifier.weight(1.2f),
                                 shape = RoundedCornerShape(12.dp),
@@ -376,7 +386,7 @@ fun WeeklyReviewDialog(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "ارسال به ChatGPT",
+                                    text = "ChatGPT",
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -388,7 +398,7 @@ fun WeeklyReviewDialog(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 1.dp)
 
-            // Import JSON Program Section with Select-All on Focus TextField
+            // Import JSON Program Section
             var jsonTextFieldState by remember { mutableStateOf(TextFieldValue(text = jsonInput)) }
             var isJsonFocused by remember { mutableStateOf(false) }
 
@@ -411,7 +421,7 @@ fun WeeklyReviewDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("وارد کردن پاسخ هوش مصنوعی (فرمت JSON)", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+                    Text(strings.importProgramTitle, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
 
                     FilledTonalButton(
                         onClick = {
@@ -419,9 +429,7 @@ fun WeeklyReviewDialog(
                             if (!clipText.isNullOrBlank()) {
                                 jsonInput = clipText
                                 jsonTextFieldState = TextFieldValue(text = clipText, selection = TextRange(clipText.length))
-                                Toast.makeText(context, "متن از حافظه چسبانده شد ✅", Toast.LENGTH_SHORT).show()
-                            } else {
-                                Toast.makeText(context, "حافظه موقت (Clipboard) خالی است", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Pasted ✅", Toast.LENGTH_SHORT).show()
                             }
                         },
                         shape = RoundedCornerShape(12.dp),
@@ -429,105 +437,38 @@ fun WeeklyReviewDialog(
                     ) {
                         Icon(Icons.Default.ContentPaste, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("چسباندن", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                    }
-                }
-
-                if (detectedClipboardJson != null) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.secondaryContainer,
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(
-                                modifier = Modifier.weight(1f),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Icon(Icons.Default.AssignmentTurnedIn, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
-                                Text(
-                                    "برنامه تمرینی در حافظه پیدا شد!",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                                )
-                            }
-                            Button(
-                                onClick = {
-                                    jsonInput = detectedClipboardJson!!
-                                    jsonTextFieldState = TextFieldValue(text = detectedClipboardJson!!, selection = TextRange(detectedClipboardJson!!.length))
-                                    onImportProgram(
-                                        jsonInput, weight, waist, String.format("%.1f", sleepHours),
-                                        energy.toInt(), rpe.toInt(), finalJointPain, feedback,
-                                        muscleSoreness, finalJointPain
-                                    )
-                                },
-                                shape = RoundedCornerShape(12.dp),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                            ) {
-                                Text("وارد کردن با ۱ کلیک", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                            }
-                        }
+                        Text("Paste", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                     }
                 }
 
                 OutlinedTextField(
                     value = jsonTextFieldState,
-                    onValueChange = { newValue ->
-                        jsonTextFieldState = newValue
-                        jsonInput = newValue.text
+                    onValueChange = {
+                        jsonTextFieldState = it
+                        jsonInput = it.text
                     },
-                    placeholder = { Text("کد پاسخ هوش مصنوعی را اینجا بچسبانید...", style = MaterialTheme.typography.bodySmall) },
-                    trailingIcon = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (jsonInput.isNotEmpty()) {
-                                IconButton(onClick = {
-                                    jsonInput = ""
-                                    jsonTextFieldState = TextFieldValue("")
-                                }) {
-                                    Icon(Icons.Default.Clear, contentDescription = "پاک کردن", tint = MaterialTheme.colorScheme.error)
-                                }
-                            }
-                            IconButton(onClick = {
-                                val clipText = composeClipboardManager.getText()?.text
-                                if (!clipText.isNullOrBlank()) {
-                                    jsonInput = clipText
-                                    jsonTextFieldState = TextFieldValue(text = clipText, selection = TextRange(clipText.length))
-                                    Toast.makeText(context, "متن چسبانده شد ✅", Toast.LENGTH_SHORT).show()
-                                }
-                            }) {
-                                Icon(Icons.Default.ContentPaste, contentDescription = "چسباندن", tint = MaterialTheme.colorScheme.primary)
-                            }
-                        }
-                    },
+                    label = { Text(strings.jsonPlaceholder) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(115.dp)
-                        .onFocusChanged { focusState ->
-                            isJsonFocused = focusState.isFocused
-                        },
+                        .height(140.dp)
+                        .onFocusChanged { isJsonFocused = it.isFocused },
                     shape = RoundedCornerShape(16.dp),
                     textStyle = MaterialTheme.typography.bodySmall.copy(
                         fontFamily = FontFamily.Monospace,
-                        textDirection = TextDirection.ContentOrLtr
+                        textDirection = TextDirection.Ltr
                     )
                 )
 
-                if (!errorMessage.isNullOrBlank()) {
+                if (errorMessage != null) {
                     Surface(
                         color = MaterialTheme.colorScheme.errorContainer,
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            errorMessage,
+                            text = errorMessage,
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onErrorContainer,
-                            style = MaterialTheme.typography.labelMedium,
                             modifier = Modifier.padding(12.dp)
                         )
                     }
@@ -536,94 +477,40 @@ fun WeeklyReviewDialog(
                 Button(
                     onClick = {
                         onImportProgram(
-                            jsonInput, weight, waist, String.format("%.1f", sleepHours),
-                            energy.toInt(), rpe.toInt(), finalJointPain, feedback,
-                            muscleSoreness, finalJointPain
+                            jsonInput, weight, waist,
+                            String.format("%.1f", sleepHours), energy.toInt(), rpe.toInt(),
+                            finalJointPain, feedback, muscleSoreness, finalJointPain
                         )
                     },
-                    enabled = !isLoading && jsonInput.isNotBlank(),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(54.dp),
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    enabled = jsonInput.isNotBlank() && !isLoading,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
                     if (isLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.5.dp)
+                        CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.5.dp, color = MaterialTheme.colorScheme.onPrimary)
                     } else {
                         Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("اعمال و شروع هفته جدید", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(strings.importProgramBtn, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
                 }
             }
         }
     }
 }
-}
 
-@Composable
-fun MetricInput(
-    value: String,
-    onValueChange: (String) -> Unit,
-    label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    modifier: Modifier = Modifier
-) {
-    var textFieldValueState by remember {
-        mutableStateOf(TextFieldValue(text = value))
-    }
-    var isFocused by remember { mutableStateOf(false) }
-
-    LaunchedEffect(value) {
-        if (value != textFieldValueState.text) {
-            textFieldValueState = TextFieldValue(
-                text = value,
-                selection = TextRange(value.length)
-            )
-        }
-    }
-
-    LaunchedEffect(isFocused) {
-        if (isFocused && textFieldValueState.text.isNotEmpty()) {
-            kotlinx.coroutines.delay(50)
-            textFieldValueState = textFieldValueState.copy(
-                selection = TextRange(0, textFieldValueState.text.length)
-            )
-        }
-    }
-
-    OutlinedTextField(
-        value = textFieldValueState,
-        onValueChange = { newValue ->
-            textFieldValueState = newValue
-            onValueChange(newValue.text)
-        },
-        label = { Text(label, style = MaterialTheme.typography.labelSmall) },
-        leadingIcon = { Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp)) },
-        modifier = modifier.onFocusChanged { focusState ->
-            isFocused = focusState.isFocused
-        },
-        singleLine = true,
-        shape = RoundedCornerShape(14.dp),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        textStyle = MaterialTheme.typography.bodyMedium.copy(
-            textDirection = TextDirection.Ltr
-        )
-    )
-}
-
-private fun openChatGPT(context: Context, promptText: String) {
-    // 1. Copy prompt to clipboard first
+private fun openChatGPT(context: Context, promptText: String, toastMessage: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     clipboard.setPrimaryClip(ClipData.newPlainText("AI Prompt", promptText))
 
     val chatGptPackage = "com.openai.chatgpt"
 
-    // 2. Try to launch ChatGPT app directly with prompt text via ACTION_SEND
     val sendIntent = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
         putExtra(Intent.EXTRA_TEXT, promptText)
@@ -641,29 +528,27 @@ private fun openChatGPT(context: Context, promptText: String) {
     if (isAppInstalled) {
         try {
             context.startActivity(sendIntent)
-            Toast.makeText(context, "پرامپت کپی شد و ChatGPT باز شد", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, toastMessage, Toast.LENGTH_SHORT).show()
             return
         } catch (e: Exception) {
             val launchIntent = context.packageManager.getLaunchIntentForPackage(chatGptPackage)
             if (launchIntent != null) {
                 launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 context.startActivity(launchIntent)
-                Toast.makeText(context, "پرامپت کپی شد! در چت ChatGPT چسبانید (Paste کنید).", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, toastMessage, Toast.LENGTH_LONG).show()
                 return
             }
         }
     }
 
-    // 3. Fallback: Open ChatGPT web with prompt text
     try {
         val encodedPrompt = Uri.encode(promptText)
         val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://chatgpt.com/?q=$encodedPrompt")).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         context.startActivity(webIntent)
-        Toast.makeText(context, "پرامپت کپی شد و مرورگر باز شد", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, toastMessage, Toast.LENGTH_SHORT).show()
     } catch (e: Exception) {
-        Toast.makeText(context, "پرامپت کپی شد! می‌توانید آن را در ChatGPT قرار دهید.", Toast.LENGTH_LONG).show()
+        Toast.makeText(context, toastMessage, Toast.LENGTH_LONG).show()
     }
 }
-
